@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handpan Chord Cards</title>
+    <meta name="description"
+        content="Explore harmonic possibilities with Handpan Chord Cards. A premium visual tool for musicians.">
+    <!-- Google Fonts: Outfit for headings, Inter for body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="app-container">
+        <header class="glass-header">
+            <div class="header-content">
+                <div class="header-title-row">
+                    <h1>Handpan Chords</h1>
+                    <button id="theme-toggle" class="theme-toggle-btn" title="Toggle Light/Dark Mode">🌞</button>
+                </div>
+                <div class="header-subtitle-row">
+                    <span id="scale-picker-trigger" class="scale-info-text" title="Change Scale">
+                        <span id="current-scale-display">E Amara • G3 F#3</span>
+                    </span>
+                    <button id="viz-toggle" class="viz-toggle-btn" title="Toggle Handpan Diagram">▲</button>
+                </div>
+            </div>
+            <div class="header-controls">
+                <!-- Global controls removed, moved to progression header -->
+            </div>
+        </header>
+
+        <!-- Visualizer Section -->
+        <section id="visualizer-section" class="visualizer-section">
+            <div class="handpan-container">
+                <button id="canvas-play-btn" class="canvas-play-btn" title="Play Sequence">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </button>
+                <svg id="handpan-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                    <!-- Main Body -->
+                    <circle cx="200" cy="200" r="165" class="hp-body" />
+
+                    <!-- Bottom Side Notes Marker (Dashed line) -->
+                    <circle cx="200" cy="200" r="185" fill="none" stroke="var(--glass-border)" stroke-dasharray="4 4"
+                        opacity="0.4" />
+
+                    <!-- Ding (Center) -->
+                    <g id="note-E3" class="hp-note ding" data-note="E3">
+                        <circle cx="200" cy="200" r="48" class="note-area" />
+                        <text x="200" y="205" text-anchor="middle" class="note-label">E3</text>
+                    </g>
+
+                    <!-- Side Notes (Zigzag Layout) -->
+                    <!-- B3: Immediately below E3 -->
+                    <g id="note-B3" class="hp-note" data-note="B3">
+                        <circle cx="200" cy="325" r="32" class="note-area" />
+                        <text x="200" y="330" text-anchor="middle" class="note-label">B3</text>
+                    </g>
+                    <!-- D4: Left of B3, E4: Right of B3 -->
+                    <g id="note-D4" class="hp-note" data-note="D4">
+                        <circle cx="115" cy="305" r="30" class="note-area" />
+                        <text x="115" y="310" text-anchor="middle" class="note-label">D4</text>
+                    </g>
+                    <g id="note-E4" class="hp-note" data-note="E4">
+                        <circle cx="285" cy="305" r="30" class="note-area" />
+                        <text x="285" y="310" text-anchor="middle" class="note-label">E4</text>
+                    </g>
+                    <!-- F#4: Middle Left, G4: Middle Right -->
+                    <g id="note-F#4" class="hp-note" data-note="F#4">
+                        <circle cx="80" cy="210" r="30" class="note-area" />
+                        <text x="80" y="215" text-anchor="middle" class="note-label">F#4</text>
+                    </g>
+                    <g id="note-G4" class="hp-note" data-note="G4">
+                        <circle cx="320" cy="210" r="30" class="note-area" />
+                        <text x="320" y="215" text-anchor="middle" class="note-label">G4</text>
+                    </g>
+                    <!-- A4: Upper Left, B4: Upper Right -->
+                    <g id="note-A4" class="hp-note" data-note="A4">
+                        <circle cx="120" cy="125" r="30" class="note-area" />
+                        <text x="120" y="130" text-anchor="middle" class="note-label">A4</text>
+                    </g>
+                    <g id="note-B4" class="hp-note" data-note="B4">
+                        <circle cx="280" cy="125" r="30" class="note-area" />
+                        <text x="280" y="130" text-anchor="middle" class="note-label">B4</text>
+                    </g>
+                    <!-- D5: Top Centerish -->
+                    <g id="note-D5" class="hp-note" data-note="D5">
+                        <circle cx="200" cy="85" r="30" class="note-area" />
+                        <text x="200" y="90" text-anchor="middle" class="note-label">D5</text>
+                    </g>
+
+                    <!-- Bottom Shell Notes (Outside the circle) -->
+                    <!-- F#3: Outside Left of F#4 -->
+                    <g id="note-F#3" class="hp-note side-note" data-note="F#3">
+                        <circle cx="25" cy="205" r="22" class="note-area" />
+                        <text x="25" y="209" text-anchor="middle" class="note-label-small">F#3</text>
+                    </g>
+                    <!-- G3: Outside Right of G4 -->
+                    <g id="note-G3" class="hp-note side-note" data-note="G3">
+                        <circle cx="375" cy="205" r="22" class="note-area" />
+                        <text x="375" y="209" text-anchor="middle" class="note-label-small">G3</text>
+                    </g>
+                    <!-- E5: Above and Right of B4 -->
+                    <g id="note-E5" class="hp-note side-note" data-note="E5">
+                        <circle cx="340" cy="70" r="22" class="note-area" />
+                        <text x="340" y="74" text-anchor="middle" class="note-label-small">E5</text>
+                    </g>
+                </svg>
+                <button id="vis-label-toggle-btn" class="icon-toggle-btn"
+                    title="Toggle Labels: Notes / Numbers / Degrees"
+                    style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.4); color:white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; z-index: 100;">
+                    ABC
+                </button>
+            </div>
+        </section>
+
+        <!-- Progression Stage -->
+        <section class="progression-section">
+            <div class="progression-header">
+                <div class="progression-left-group">
+                    <h3 class="section-title">Progression Stage</h3>
+                    <div class="header-actions">
+                        <button id="add-custom-chord" class="clear-btn add" title="Add Custom Chord">+</button>
+                        <button id="save-comp-btn" class="clear-btn" title="Save Composition">💾</button>
+                        <button id="load-comp-btn" class="clear-btn" title="Load Composition">📂</button>
+                        <button id="share-progression" class="clear-btn" title="Share Progression Link">🔗</button>
+                        <button id="clear-progression" class="clear-btn" title="Clear All">–</button>
+                    </div>
+                    <button id="play-progression-btn" class="premium-btn" title="Play Sequence"
+                        style="padding: 10px 24px; font-size: 0.95rem;">
+                        Play Sequence ▶
+                    </button>
+                </div>
+                <div class="progression-right-group">
+                    <div class="control-group">
+                        <label>BPM: <span id="bpm-value">80</span></label>
+                        <input type="range" id="bpm-slider" min="60" max="280" value="80">
+                    </div>
+                    <input type="number" id="repeat-count" value="2" style="display: none;">
+                </div>
+            </div>
+            <div id="progression-stage" class="progression-stage">
+                <!-- Selected chords will appear here -->
+                <div class="placeholder-text">Click + on a card to add to progression</div>
+            </div>
+        </section>
+
+        <div class="glass-header chord-panel-header"
+            style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 20px;">
+            <h2 style="margin:0; font-size: 1.2rem; background: none; -webkit-text-fill-color: var(--text-main);">
+                Available Chords</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="sort-chords-btn" class="icon-btn" title="Sort by Pitch / Group"
+                    style="font-size: 1rem; opacity: 0.7; display: none;">⇅</button>
+                <button id="chord-toggle-btn" class="viz-toggle-btn" style="font-size: 1.2rem;">▼</button>
+            </div>
+        </div>
+
+        <section id="chord-grid" class="card-grid collapsed">
+            <!-- Dynamic Content -->
+        </section>
+    </main>
+
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <!-- Scale Selection Modal -->
+    <div id="scale-modal" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2>Select Scale Type</h2>
+                <span class="close-modal" id="close-scale-modal">&times;</span>
+            </div>
+            <div
+                style="font-size: 0.8rem; font-weight: 600; color: #888; margin-bottom: 10px; padding-left: 5px; text-transform: uppercase; letter-spacing: 1px;">
+                Scale Library</div>
+            <div id="scale-list" class="scale-list">
+                <!-- Populated by JS -->
+            </div>
+            <div class="modal-footer">
+                <button id="btn-custom-scale" class="premium-btn"
+                    style="margin-top: 20px; width: 100%; background: #fff; color: #000;">Create Custom Handpan
+                    +</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Scale Modal -->
+    <div id="custom-scale-modal" class="modal">
+        <div class="modal-content glass-card large">
+            <div class="modal-header">
+                <h2>Custom Handpan</h2>
+                <span class="close-modal" id="close-custom-modal">&times;</span>
+            </div>
+            <div class="custom-scale-form">
+                <div class="input-group">
+                    <label>Scale Name</label>
+                    <input type="text" id="custom-scale-name" placeholder="e.g. My Mystic D" class="premium-text-input">
+                </div>
+                <div class="input-group">
+                    <label style="display: block; margin-top: 15px;">Top Shell Notes (First is Ding)</label>
+                    <p class="input-hint">Space separated, e.g: D3 A3 Bb3 C4 D4 E4 F4 G4 A4</p>
+                    <input type="text" id="custom-scale-top" placeholder="D3 A3 Bb3..." class="premium-text-input">
+                </div>
+                <div class="input-group">
+                    <label style="display: block; margin-top: 15px;">Bottom Shell Notes (Optional)</label>
+                    <p class="input-hint">Format: Note(Parent), e.g: F#3(F#4) G3(G4)</p>
+                    <input type="text" id="custom-scale-bottom" placeholder="E5(B4) F#3(F#4)..."
+                        class="premium-text-input">
+                </div>
+                <div class="form-actions">
+                    <button id="save-custom-scale" class="premium-btn"
+                        style="background: var(--accent-color); color: #000;">Build My Handpan!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voicing Modal -->
+    <div id="voicing-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2 id="voicing-modal-title">Chord Options</h2>
+                <button id="close-voicing-modal" class="close-btn">&times;</button>
+            </div>
+            <div id="voicing-list" class="modal-body">
+                <!-- Voicings go here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Editor Modal -->
+    <div id="editor-modal" class="modal-overlay" style="display: none; z-index: 2000;">
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Edit Arpeggio</h2>
+                <button id="close-editor-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="editor-name" placeholder="Part Name (e.g. Intro)" class="premium-text-input"
+                        style="flex: 1;">
+                </div>
+                <p style="font-size: 0.9rem; opacity: 0.8;">Enter notes separated by spaces (e.g. "E3 G3 B3").</p>
+                <textarea id="editor-input" rows="5" class="premium-text-input"
+                    style="font-family: monospace; resize: vertical; min-height: 120px;"></textarea>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-size: 0.9rem; opacity: 0.8;">Repeats:</label>
+                    <input type="number" id="editor-repeats" min="1" max="16" value="1" class="premium-text-input"
+                        style="width: 60px;">
+                </div>
+
+                <div class="modal-footer"
+                    style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button id="editor-cancel-btn" class="secondary-btn">Cancel</button>
+                    <button id="editor-save-btn" class="premium-btn">Save Changes</button>
+                </div>
+
+                <!-- Mini diagram injected here via JS -->
+                <div id="editor-mini-handpan"
+                    style="width: 280px; height: 280px; margin: 10px auto 0 auto; flex-shrink: 0; pointer-events: none; display: flex; justify-content: center; align-items: center;">
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Save Composition Modal -->
+    <div id="save-comp-modal" class="modal-overlay" style="display: none; z-index: 2100;">
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Save Composition</h2>
+                <button id="close-save-comp" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.9rem; opacity: 0.8;">Composition Name</label>
+                    <input type="text" id="save-comp-name" placeholder="e.g. My First Song" class="premium-text-input">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.9rem; opacity: 0.8;">Category (Optional)</label>
+                    <input type="text" id="save-comp-category" placeholder="e.g. Ideas, Covers"
+                        class="premium-text-input">
+                </div>
+                <div class="modal-footer"
+                    style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button id="cancel-save-comp" class="secondary-btn">Cancel</button>
+                    <button id="confirm-save-comp" class="premium-btn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Composition Modal -->
+    <div id="load-comp-modal" class="modal-overlay" style="display: none; z-index: 2100;">
+        <div class="modal-content glass-card"
+            style="max-width: 500px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h2>Load Composition</h2>
+                <button id="close-load-comp" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                <div id="compositions-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Categories and items injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js?v=2"></script>
+</body>
+
+</html>
