@@ -183,7 +183,7 @@ export function playTak(startTime, isAlt = false, isGhost = false, suppressVisua
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
 
     source.start(t);
-    source.stop(t + 0.05);
+    source.stop(t + 0.06);
 
     const nodeRef = { source: source, gainNode: gain };
     activeNodes.push(nodeRef);
