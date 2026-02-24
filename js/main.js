@@ -599,6 +599,14 @@ function setupGlobalEvents() {
 
                 // Toggle icon
                 const isFullscreen = container.classList.contains('visualizer-fullscreen');
+
+                // Prevent background scrolling
+                if (isFullscreen) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+
                 if (isFullscreen) {
                     vizFullscreenBtn.innerHTML = `
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">

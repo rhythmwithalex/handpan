@@ -300,16 +300,24 @@ body {
     margin: 0 !important;
     border-radius: 0 !important;
     z-index: 9999;
-    background: var(--bg-main);
+    background: rgba(15, 15, 19, 0.95) !important;
+    /* Dark solid background */
+    backdrop-filter: blur(10px);
     display: flex;
     justify-content: center;
     align-items: center;
+    touch-action: none;
+    /* Prevent scroll on touch */
+    overscroll-behavior: none;
 }
 
 .visualizer-fullscreen #handpan-svg {
-    height: 90vh !important;
+    height: 95vh !important;
+    /* Slightly larger */
     width: auto !important;
-    max-width: 90vw;
+    max-width: 95vw;
+    touch-action: none;
+    /* Prevent scroll on touch inside SVG */
 }
 
 #handpan-svg {
