@@ -124,7 +124,7 @@ function getSortedScaleNotes(currentScale) {
     const topNotes = currentScale.top || [];
     const bottomNotes = currentScale.bottom ? Object.keys(currentScale.bottom) : [];
 
-    // Helper to parse note string "E3" or "D:F#3" -> {note, octave, freq, isDing}
+    // Helper to parse note string "E3" or "D:F#3" -> {note, octave, freq, name, isDing}
     const parse = (nStr) => {
         let isExplicitDing = false;
         let cleanStr = nStr;

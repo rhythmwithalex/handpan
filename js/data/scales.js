@@ -67,7 +67,7 @@ export const PREDEFINED_SCALES = [
         id: 'e-amara',
         name: 'E Amara',
         top: ['E3', 'B3', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'D5'],
-        bottom: { 'F#3': 'F#4', 'G3': 'G4', 'E5': 'B4' }
+        bottom: { 'D:F#3': 'F#4', 'D:G3': 'G4', 'E5': 'B4' }
     }
 ];
 
