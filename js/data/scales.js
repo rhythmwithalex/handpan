@@ -64,6 +64,12 @@ export const SCALE_TEMPLATES = [
 
 export const PREDEFINED_SCALES = [
     {
+        id: 'd-kurd-9',
+        name: 'D Kurd 9',
+        top: ['D3', 'A3', 'Bb3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'C5'],
+        bottom: {}
+    },
+    {
         id: 'e-amara',
         name: 'E Amara',
         top: ['E3', 'B3', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'D5'],
