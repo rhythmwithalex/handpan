@@ -453,13 +453,13 @@ function setupScheduler() {
 
             const btn = document.getElementById('play-progression-btn');
             if (btn) {
-                btn.innerHTML = 'Play Sequence ▶';
+                btn.innerHTML = 'Play ▶';
                 btn.classList.remove('playing');
             }
             const canvasBtn = document.getElementById('canvas-play-btn');
             if (canvasBtn) {
                 canvasBtn.classList.remove('playing');
-                canvasBtn.setAttribute('title', 'Play Sequence');
+                canvasBtn.setAttribute('title', 'Play');
                 canvasBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
             }
             resetVisuals();
@@ -513,12 +513,12 @@ function togglePlayback() {
         startProgression(chords);
 
         if (btn) {
-            btn.textContent = 'Stop Sequence ■';
+            btn.textContent = 'Stop ■';
             btn.classList.add('playing');
         }
         if (canvasBtn) {
             canvasBtn.classList.add('playing');
-            canvasBtn.setAttribute('title', 'Stop Sequence');
+            canvasBtn.setAttribute('title', 'Stop');
             canvasBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>';
         }
     }
@@ -578,15 +578,54 @@ function setupGlobalEvents() {
         }
     });
 
-    // Mobile Viz Toggle
+    // 4. Visualizer View Toggle
     const vizToggle = document.getElementById('viz-toggle');
-    if (vizToggle) {
+    const vizSection = document.getElementById('visualizer-section');
+    if (vizToggle && vizSection) {
         vizToggle.addEventListener('click', () => {
-            const vizSection = document.getElementById('visualizer-section');
             vizSection.classList.toggle('collapsed');
+            vizToggle.classList.toggle('collapsed');
             const isCollapsed = vizSection.classList.contains('collapsed');
             vizToggle.innerHTML = isCollapsed ? '<span style="font-size: 1.2em;">▼</span>' : '<span style="font-size: 1.2em;">▲</span>';
         });
+    }
+
+    const vizFullscreenBtn = document.getElementById('viz-fullscreen-btn');
+    if (vizFullscreenBtn) {
+        vizFullscreenBtn.addEventListener('click', () => {
+            const container = document.querySelector('.handpan-container');
+            if (container) {
+                container.classList.toggle('visualizer-fullscreen');
+
+                // Toggle icon
+                const isFullscreen = container.classList.contains('visualizer-fullscreen');
+                if (isFullscreen) {
+                    vizFullscreenBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 3v3h-3m16 0h-3v-3m0 18v-3h3M3 16h3v3" />
+                        </svg>
+                    `;
+                    vizFullscreenBtn.title = "Exit Fullscreen";
+                } else {
+                    vizFullscreenBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                        </svg>
+                    `;
+                    vizFullscreenBtn.title = "Toggle Fullscreen";
+                }
+            }
+        });
+
+        // Also allow clicking the background to exit fullscreen
+        const container = document.querySelector('.handpan-container');
+        if (container) {
+            container.addEventListener('click', (e) => {
+                if (e.target === container && container.classList.contains('visualizer-fullscreen')) {
+                    vizFullscreenBtn.click();
+                }
+            });
+        }
     }
 
     // Chord Panel Toggle

@@ -265,6 +265,53 @@ body {
     color: white;
 }
 
+.viz-fullscreen-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(4px);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.viz-fullscreen-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(39, 174, 96, 0.4);
+}
+
+.visualizer-fullscreen {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    z-index: 9999;
+    background: var(--bg-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.visualizer-fullscreen #handpan-svg {
+    height: 90vh !important;
+    width: auto !important;
+    max-width: 90vw;
+}
+
 #handpan-svg {
     width: 100%;
     height: auto;

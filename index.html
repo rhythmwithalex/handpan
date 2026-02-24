@@ -46,9 +46,15 @@
         <!-- Visualizer Section -->
         <section id="visualizer-section" class="visualizer-section">
             <div class="handpan-container">
-                <button id="canvas-play-btn" class="canvas-play-btn" title="Play Sequence">
+                <button id="canvas-play-btn" class="canvas-play-btn" title="Play">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                         <path d="M8 5v14l11-7z" />
+                    </svg>
+                </button>
+                <button id="viz-fullscreen-btn" class="viz-fullscreen-btn" title="Toggle Fullscreen">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
                     </svg>
                 </button>
                 <svg id="handpan-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
@@ -141,9 +147,9 @@
                         <button id="share-progression" class="clear-btn" title="Share Progression Link">🔗</button>
                         <button id="clear-progression" class="clear-btn" title="Clear All">–</button>
                     </div>
-                    <button id="play-progression-btn" class="premium-btn" title="Play Sequence"
-                        style="padding: 10px 24px; font-size: 0.95rem;">
-                        Play Sequence ▶
+                    <button id="play-progression-btn" class="premium-btn" title="Play"
+                        style="padding: 10px 0; font-size: 0.95rem; width: 120px; text-align: center;">
+                        Play ▶
                     </button>
                 </div>
                 <div class="progression-right-group">
