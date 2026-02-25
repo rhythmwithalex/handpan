@@ -147,6 +147,10 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     const N = topSideNotes.length;
     const stepAngle = (2 * Math.PI) / N;
 
+    // Calculate dynamic scaling factor to prevent overlapping if N is large
+    const maxAllowedTopR = N > 1 ? (radius * Math.sin(Math.PI / N)) * 0.85 : 50;
+    const scaleFactor = N > 1 ? Math.min(1, maxAllowedTopR / 36) : 1;
+
     topSideNotes.forEach((name, i) => {
         const isExtraDing = name.startsWith('D:');
         const direction = (i % 2 === 1) ? 1 : -1;
@@ -155,7 +159,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
         const x = 200 + radius * Math.cos(angle);
         const y = 200 + radius * Math.sin(angle);
-        const r = isExtraDing ? 46 : 38; // Increased from 38/30 by 8px
+        const r = (isExtraDing ? 46 : 36) * scaleFactor;
 
         const label = getLabel(name, i);
 
@@ -176,7 +180,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const outerRadius = 185;
         const x = 200 + (dx / dist) * outerRadius;
         const y = 200 + (dy / dist) * outerRadius;
-        const r = note.startsWith('D:') ? 36 : 28; // Increased from 30/22 by 6px
+        const r = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
 
         const label = getLabel(note, topSideNotes.length + i);
 
