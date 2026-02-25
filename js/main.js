@@ -625,15 +625,7 @@ function setupGlobalEvents() {
             }
         });
 
-        // Also allow clicking the background to exit fullscreen
-        const container = document.querySelector('.handpan-container');
-        if (container) {
-            container.addEventListener('click', (e) => {
-                if (e.target === container && container.classList.contains('visualizer-fullscreen')) {
-                    vizFullscreenBtn.click();
-                }
-            });
-        }
+        // Background clicking no longer exits fullscreen.
     }
 
     // Chord Panel Toggle

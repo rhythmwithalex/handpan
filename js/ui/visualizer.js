@@ -41,6 +41,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     body.setAttribute("cy", "200");
     body.setAttribute("r", "165");
     body.classList.add("hp-body");
+    body.addEventListener('pointerdown', (e) => {
+        // Only trigger body click if we didn't click on a note
+        if (e.target === body && bodyClickCallback) {
+            bodyClickCallback();
+        }
+    });
     svg.appendChild(body);
 
     // Percussion Visualizer Ring (Dotted/Dashed, hidden by default)
@@ -207,6 +213,7 @@ function createNoteG(noteName, labelText, x, y, r, isDing = false, isBottom = fa
 
     g.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent body click
         if (noteClickCallback) {
             noteClickCallback(cleanName);
         }

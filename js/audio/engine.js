@@ -175,7 +175,7 @@ export function playTak(startTime, isAlt = false, isGhost = false, suppressVisua
         gain.connect(reverbNode);
     }
 
-    const baseVolume = 0.8;
+    const baseVolume = 0.68; // Lowered by 15% from 0.8
     const volume = isGhost ? baseVolume * 0.4 : baseVolume;
 
     gain.gain.setValueAtTime(0, t);
