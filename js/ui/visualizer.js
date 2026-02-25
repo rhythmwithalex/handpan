@@ -42,10 +42,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     body.setAttribute("r", "165");
     body.classList.add("hp-body");
     body.addEventListener('pointerdown', (e) => {
-        // Only trigger body click if we didn't click on a note
-        if (e.target === body && bodyClickCallback) {
-            bodyClickCallback();
-        }
+        // Prevent background Tak from firing when clicking inside the body
+        e.stopPropagation();
     });
     svg.appendChild(body);
 
@@ -157,7 +155,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
         const x = 200 + radius * Math.cos(angle);
         const y = 200 + radius * Math.sin(angle);
-        const r = isExtraDing ? 38 : 30;
+        const r = isExtraDing ? 46 : 38; // Increased from 38/30 by 8px
 
         const label = getLabel(name, i);
 
@@ -178,7 +176,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const outerRadius = 185;
         const x = 200 + (dx / dist) * outerRadius;
         const y = 200 + (dy / dist) * outerRadius;
-        const r = note.startsWith('D:') ? 30 : 22;
+        const r = note.startsWith('D:') ? 36 : 28; // Increased from 30/22 by 6px
 
         const label = getLabel(note, topSideNotes.length + i);
 
