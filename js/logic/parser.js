@@ -100,8 +100,9 @@ function parseNoteToken(token, currentScale) {
 
         const match = raw.match(/^([A-G][#b]?)(\d)$/i);
         if (match) {
+            const parsedNote = match[1].charAt(0).toUpperCase() + (match[1].length > 1 ? match[1].charAt(1).toLowerCase() : '');
             noteGroup.push({
-                note: match[1].toUpperCase(),
+                note: parsedNote,
                 octave: parseInt(match[2]),
                 type: 'note', // Explicit type
                 freq: getFrequencyForNoteName(match[0])
