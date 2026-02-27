@@ -122,8 +122,8 @@ export function playTone(freq, noteName, duration = 2.4, startTime = 0, suppress
     });
 
     masterGain.gain.setValueAtTime(0, t);
-    masterGain.gain.linearRampToValueAtTime(0.8, t + 0.003);
-    masterGain.gain.exponentialRampToValueAtTime(0.5, t + 0.05);
+    masterGain.gain.linearRampToValueAtTime(0.8, t + 0.01); // 10ms micro fade-in to prevent popping
+    masterGain.gain.exponentialRampToValueAtTime(0.5, t + 0.08);
     masterGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
     const nodeRef = { oscs: nodes, gainNode: masterGain };
@@ -179,8 +179,8 @@ export function playTak(startTime, isAlt = false, isGhost = false, suppressVisua
     const volume = isGhost ? baseVolume * 0.4 : baseVolume;
 
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(volume, t + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    gain.gain.linearRampToValueAtTime(volume, t + 0.005); // Micro fade-in to avoid clicks
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
 
     source.start(t);
     source.stop(t + 0.06);
