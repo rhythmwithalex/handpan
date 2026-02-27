@@ -91,8 +91,9 @@ function renderScaleSelection(step = 'categories') {
     if (step === 'categories') {
         selectedTemplate = null;
 
-        // Render Scale Categories (Templates)
-        SCALE_TEMPLATES.forEach(tmpl => {
+        // Render Scale Categories (Templates) sorted alphabetically
+        const sortedTemplates = [...SCALE_TEMPLATES].sort((a, b) => a.name.localeCompare(b.name));
+        sortedTemplates.forEach(tmpl => {
             const div = document.createElement('div');
             // Use 'scale-item-category' class
             div.className = 'scale-item-category';
@@ -150,6 +151,26 @@ function renderScaleSelection(step = 'categories') {
             };
             grid.appendChild(keyBtn);
         });
+
+        // Add "Add Custom Root" button
+        const customRootBtn = document.createElement('button');
+        customRootBtn.className = 'scale-key-btn';
+        customRootBtn.style.gridColumn = '1 / -1';
+        customRootBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+        customRootBtn.style.color = '#ccc';
+        customRootBtn.textContent = '+ Add Custom Root';
+        customRootBtn.onclick = () => {
+            let input = prompt(`Enter a new root note for ${selectedTemplate.name} (e.g., C#, Eb, F):`);
+            if (input) {
+                let customKey = input.trim();
+                if (customKey.length > 0) {
+                    customKey = customKey.charAt(0).toUpperCase() + customKey.slice(1).toLowerCase();
+                    generateAndSelectScale(selectedTemplate, customKey);
+                }
+            }
+        };
+        grid.appendChild(customRootBtn);
+
         list.appendChild(grid);
     }
 }

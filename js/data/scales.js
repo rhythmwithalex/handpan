@@ -59,6 +59,12 @@ export const SCALE_TEMPLATES = [
         type: 'Minor',
         keys: ['A', 'C', 'D', 'F', 'G'],
         formula: [5, 7, 10, 12, 14, 15, 17, 19] // 4, 5, b7, 1, 2, b3, 4, 5
+    },
+    {
+        name: 'Aegean',
+        type: 'Lydian',
+        keys: ['C', 'C#', 'D', 'E'],
+        formula: [4, 7, 11, 12, 16, 18, 19, 23] // 3, 5, 7, 1, 3, #4, 5, 7
     }
 ];
 
@@ -79,6 +85,12 @@ export const PREDEFINED_SCALES = [
         id: 'b-hijaz',
         name: 'B Hijaz',
         top: ['B2', 'F#3', 'G3', 'A#3', 'B3', 'C#4', 'D4', 'E4', 'F#4'],
+        bottom: {}
+    },
+    {
+        id: 'c-aegean-9',
+        name: 'C Aegean',
+        top: ['C3', 'E3', 'G3', 'B3', 'C4', 'E4', 'F#4', 'G4', 'B4'],
         bottom: {}
     }
 ];
