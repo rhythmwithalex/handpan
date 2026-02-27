@@ -707,3 +707,34 @@ if (document.readyState === 'loading') {
 } else {
     initApp();
 }
+
+// --- PWA Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(registration => {
+            console.log('SW registered: ', registration);
+
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                    // Has network content changed?
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New update available
+                        const banner = document.getElementById('pwa-update-banner');
+                        const btn = document.getElementById('pwa-reload-btn');
+                        if (banner && btn) {
+                            banner.style.display = 'flex';
+                            banner.classList.add('show');
+                            btn.addEventListener('click', () => {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                window.location.reload();
+                            });
+                        }
+                    }
+                });
+            });
+        }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+        });
+    });
+}

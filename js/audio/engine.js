@@ -121,9 +121,23 @@ export function playTone(freq, noteName, duration = 2.4, startTime = 0, suppress
         nodes.push(osc);
     });
 
+    // Dynamic Volume Boost for Bass Notes (Ding)
+    // Mobile speakers struggle with <200Hz, so we boost the gain by up to 30% for low notes
+    let volMult = 1.0;
+    if (freq < 150) {
+        volMult = 1.3; // +30% for deep Dings
+    } else if (freq < 300) {
+        // Interpolate between 1.3 and 1.0 for the mid-low range
+        const t = (freq - 150) / 150;
+        volMult = 1.3 - (0.3 * t);
+    }
+
+    const peakVolume = 0.8 * volMult;
+    const sustainVolume = 0.5 * volMult;
+
     masterGain.gain.setValueAtTime(0, t);
-    masterGain.gain.linearRampToValueAtTime(0.8, t + 0.01); // 10ms micro fade-in to prevent popping
-    masterGain.gain.exponentialRampToValueAtTime(0.5, t + 0.08);
+    masterGain.gain.linearRampToValueAtTime(peakVolume, t + 0.01); // 10ms micro fade-in to prevent popping
+    masterGain.gain.exponentialRampToValueAtTime(sustainVolume, t + 0.08);
     masterGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
     const nodeRef = { oscs: nodes, gainNode: masterGain };

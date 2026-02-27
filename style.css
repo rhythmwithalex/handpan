@@ -1985,3 +1985,38 @@ body {
     color: #82cfff;
     /* Brighter blue for dark mode visibility */
 }
+
+/* PWA Update Banner */
+.update-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(40, 40, 40, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    font-family: var(--font-body);
+    font-weight: 500;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.update-banner.show {
+    animation: slideUpBanner 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideUpBanner {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}

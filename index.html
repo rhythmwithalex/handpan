@@ -13,6 +13,14 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;500;700&display=swap"
         rel="stylesheet">
+
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Handpan">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -340,6 +348,12 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- PWA Update Banner -->
+    <div id="pwa-update-banner" class="update-banner" style="display: none;">
+        <span>A new version is available!</span>
+        <button id="pwa-reload-btn" class="premium-btn" style="padding: 5px 15px; font-size: 0.9rem;">Update</button>
     </div>
 
     <script type="module" src="js/main.js?v=2"></script>
