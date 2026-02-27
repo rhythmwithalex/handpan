@@ -588,15 +588,20 @@ function setupGlobalEvents() {
     // Escape Key to close modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            // Priority 1: If Notation Info is open, close only it
+            const notationInfo = document.getElementById('notation-info-modal');
+            if (notationInfo && notationInfo.style.display !== 'none' && !notationInfo.classList.contains('hidden')) {
+                notationInfo.style.display = 'none';
+                return; // Stop here, don't close the Editor underneath
+            }
+
+            // Otherwise, close other modals
             const modals = document.querySelectorAll('.modal, .modal-overlay');
             modals.forEach(m => {
                 if (m.style.display !== 'none' && !m.classList.contains('hidden')) {
-                    // Try to find a close button inside or just hide it
-                    // Best to use the specific close logic if possible, but hiding works for "emergency" ESC
                     m.style.display = 'none';
                 }
             });
-            // Also ensure overlay is gone if it's separate
             const overlay = document.getElementById('modal-overlay');
             if (overlay) overlay.style.display = 'none';
         }

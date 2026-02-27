@@ -36,6 +36,11 @@ export function initEditor(onSave) {
             e.preventDefault();
             infoModal.style.display = 'none';
         });
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) {
+                infoModal.style.display = 'none';
+            }
+        });
     }
 
     // Previous bare '|' button listener was removed since we generate it dynamically now.
