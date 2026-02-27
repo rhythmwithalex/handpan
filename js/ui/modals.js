@@ -152,12 +152,17 @@ function renderScaleSelection(step = 'categories') {
             grid.appendChild(keyBtn);
         });
 
-        // Add "Add Custom Root" button
+        // Add "Add Custom Root" button container
+        const customRootContainer = document.createElement('div');
+        customRootContainer.style.gridColumn = '1 / -1';
+        customRootContainer.style.display = 'flex';
+        customRootContainer.style.justifyContent = 'center';
+        customRootContainer.style.marginTop = '10px';
+
         const customRootBtn = document.createElement('button');
-        customRootBtn.className = 'scale-key-btn';
-        customRootBtn.style.gridColumn = '1 / -1';
-        customRootBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-        customRootBtn.style.color = '#ccc';
+        customRootBtn.className = 'premium-btn'; // Use standard button style for better visibility
+        customRootBtn.style.padding = '8px 20px';
+        customRootBtn.style.width = 'auto'; // Prevent it from stretching
         customRootBtn.textContent = '+ Add Custom Root';
         customRootBtn.onclick = () => {
             let input = prompt(`Enter a new root note for ${selectedTemplate.name} (e.g., C#, Eb, F):`);
@@ -169,7 +174,8 @@ function renderScaleSelection(step = 'categories') {
                 }
             }
         };
-        grid.appendChild(customRootBtn);
+        customRootContainer.appendChild(customRootBtn);
+        grid.appendChild(customRootContainer);
 
         list.appendChild(grid);
     }
@@ -290,6 +296,21 @@ function generateAndSelectScale(template, key) {
         return s === f ? [s] : [s, f];
     };
 
+    // Pre-calculate unambiguous letters to avoid duplicate letters in scale (Enharmonic spelling fix)
+    const globalUsedLetters = new Set();
+
+    // The ding's letter is fixed based on user input (or its 1st character)
+    globalUsedLetters.add(key.charAt(0));
+
+    // Gather all unambiguous letters from the scale formula
+    template.formula.forEach(semitones => {
+        let chromaticIndex = (rootIndex + semitones) % 12;
+        const candidates = getSpellings(chromaticIndex);
+        if (candidates.length === 1) {
+            globalUsedLetters.add(candidates[0].charAt(0));
+        }
+    });
+
     let rootOctave = 3;
     // Keys G (7) through B (11) typically use the 2nd octave for the handpan Ding
     if (rootIndex >= 7) {
@@ -310,36 +331,38 @@ function generateAndSelectScale(template, key) {
         const candidates = getSpellings(chromaticIndex);
         const prevLetter = previousNote.charAt(0);
 
-        // Choose best candidate: Prefer different letter
+        // Choose best candidate
         let chosen = candidates[0];
 
         if (candidates.length > 1) {
-            // Check if first choice conflicts with previous letter
-            if (candidates[0].charAt(0) === prevLetter) {
-                // Conflict! Prefer second choice
-                chosen = candidates[1];
+            const c1 = candidates[0]; // Sharp
+            const c2 = candidates[1]; // Flat
+
+            const c1Conflict = globalUsedLetters.has(c1.charAt(0));
+            const c2Conflict = globalUsedLetters.has(c2.charAt(0));
+
+            if (c1Conflict && !c2Conflict) {
+                chosen = c2;
+            } else if (!c1Conflict && c2Conflict) {
+                chosen = c1;
             } else {
-                // First choice doesn't conflict. Check if second choice also doesn't conflict?
-                const c1 = candidates[0];
-                const c2 = candidates[1];
+                // Tie breaker: check if it conflicts with the immediate previous note
+                const localC1Conflict = c1.charAt(0) === prevLetter;
+                const localC2Conflict = c2.charAt(0) === prevLetter;
 
-                const c1Conflict = c1.charAt(0) === prevLetter;
-                const c2Conflict = c2.charAt(0) === prevLetter;
-
-                if (c1Conflict && !c2Conflict) chosen = c2;
-                else if (!c1Conflict && c2Conflict) chosen = c1;
-                else {
-                    // Tie: use default key preference
-                    // sharpNotes has sharps at [0], flatNotes has flats at [1]
-                    // If candidates are different, [0] is sharp, [1] is flat usually?
-                    // Let's check:
-                    // sharpNotes[1] = C#, flatNotes[1] = Db.
-                    // candidates = [C#, Db].
-                    // So index 0 is Sharp.
-                    chosen = useFlats ? candidates[1] : candidates[0];
+                if (localC1Conflict && !localC2Conflict) {
+                    chosen = c2;
+                } else if (!localC1Conflict && localC2Conflict) {
+                    chosen = c1;
+                } else {
+                    // Final fallback to scale heuristic
+                    chosen = useFlats ? c2 : c1;
                 }
             }
         }
+
+        // Add the chosen note's letter to the global set to inform future decisions
+        globalUsedLetters.add(chosen.charAt(0));
 
         const noteName = `${chosen}${octave}`;
         previousNote = noteName;

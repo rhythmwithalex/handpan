@@ -1,4 +1,4 @@
-const CACHE_NAME = 'handpan-cache-v1';
+const CACHE_NAME = 'handpan-cache-v2';
 
 // We don't need to specify all files, we can just cache requests dynamically as they come
 // using a Stale-While-Revalidate strategy.
