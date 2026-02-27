@@ -28,7 +28,22 @@ function saveCurrentState() {
 
 // --- Initialization ---
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
+    // 0. Welcome Overlay & Audio Init
+    const welcomeOverlay = document.getElementById('welcome-overlay');
+    const startBtn = document.getElementById('btn-start-app');
+    if (welcomeOverlay && startBtn) {
+        startBtn.addEventListener('click', () => {
+            try {
+                initAudio();
+            } catch (e) {
+                console.error("Audio init error:", e);
+            }
+            welcomeOverlay.style.opacity = '0';
+            setTimeout(() => welcomeOverlay.style.display = 'none', 300); // fade out duration
+        });
+    }
+
     // 1. Init Data
     initCustomScales();
 
@@ -353,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadScale(saved, true);
         }
     }
-});
+}
 
 // --- Core Logic ---
 
@@ -678,4 +693,11 @@ function setupGlobalEvents() {
             toggleChordSort();
         });
     }
+}
+
+// Ensure initApp runs even if DOMContentLoaded already fired (common with modules)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
 }

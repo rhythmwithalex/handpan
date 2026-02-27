@@ -92,36 +92,23 @@ function renderScaleSelection(step = 'categories') {
         selectedTemplate = null;
 
         // Render Scale Categories (Templates)
-        // Render Scale Categories (Templates)
         SCALE_TEMPLATES.forEach(tmpl => {
             const div = document.createElement('div');
-            // Use 'scale-item' class instead of 'scale-item-category' to match expected style or create new
+            // Use 'scale-item-category' class
             div.className = 'scale-item-category';
-            // Simplified style
-            div.style.display = 'flex';
-            div.style.justifyContent = 'space-between';
-            div.style.alignItems = 'center';
-            div.style.padding = '15px';
-            div.style.background = 'transparent';
-            div.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-            div.style.cursor = 'pointer';
 
             div.innerHTML = `
-                <div style="display:flex; flex-direction:column;">
-                    <span style="font-weight:700; font-size:1rem; color:#333;">${tmpl.name}</span>
-                    <span style="font-size:0.85rem; color:#666;">${tmpl.type}</span>
+                <div class="scale-item-text">
+                    <span class="scale-item-title">${tmpl.name}</span>
+                    <span class="scale-item-subtitle">${tmpl.type}</span>
                 </div>
-                <div style="color:#ccc;">›</div>
+                <div class="scale-item-arrow">›</div>
             `;
 
             div.onclick = () => {
                 selectedTemplate = tmpl;
                 renderScaleSelection('keys');
             };
-
-            // Hover effect handled by CSS or inline
-            div.onmouseover = () => { div.style.background = 'rgba(0,0,0,0.03)'; };
-            div.onmouseout = () => { div.style.background = 'transparent'; };
 
             list.appendChild(div);
         });
