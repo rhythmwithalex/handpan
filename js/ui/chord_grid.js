@@ -250,8 +250,9 @@ function openVoicingModal(chord, dingNotes) {
         addBtn.onclick = (e) => {
             e.stopPropagation();
             if (dependencies.addToProgression) {
-                const chordLabel = chord ? (chord.name === 'Custom Chord' ? label : chord.name) : label;
-                dependencies.addToProgression(chord, notes, chordLabel);
+                // Determine label if it's a specific voicing
+                const chordLabel = voicingIndex >= 0 ? `${chord.name} (V${voicingIndex + 1})` : chord.name;
+                dependencies.addToProgression(chord, notes, chordLabel, null, 4);
             }
             closeVoicingModal();
         };

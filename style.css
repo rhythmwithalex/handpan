@@ -1567,6 +1567,26 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.mini-handpan-container {
+    width: 250px;
+    height: 250px;
+    margin: 5px auto 0 auto;
+    flex-shrink: 0;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@media (max-height: 800px),
+(max-width: 600px) {
+    .mini-handpan-container {
+        width: 180px;
+        height: 180px;
+        margin: 5px auto 0 auto;
+    }
+}
+
 @keyframes popIn {
     from {
         transform: scale(0.8);

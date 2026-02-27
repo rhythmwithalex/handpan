@@ -81,10 +81,13 @@ export function exportProgressionData() {
     return data;
 }
 
-export function addChordToProgression(chord, specificNotes = null, label = null, rawText = null) {
+export function addChordToProgression(chord, specificNotes = null, label = null, rawText = null, defaultRepeats = 1) {
     const item = document.createElement('div');
     item.className = 'progression-item glass-card-small';
     item.draggable = true;
+    if (defaultRepeats > 1) {
+        item.dataset.repeats = defaultRepeats;
+    }
 
     let displayNotes = [];
     let actualNotes = [];
@@ -113,7 +116,7 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
             displayNotes = actualNotes.map(n => `${n.note}${n.octave}`);
         }
     } else {
-        chordName = "Custom Arp";
+        chordName = "Musical Phrase";
         if (specificNotes) {
             actualNotes = specificNotes;
             displayNotes = specificNotes.map(evt => {
@@ -140,8 +143,8 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
 
     let headerContentNotes = '';
 
-    // Prefer raw text display for Custom Arps (when chord is null or explicit rawText is provided)
-    if (rawText && (!chord || chord.name === "Custom Chord" || chord.name === "Custom Arp")) {
+    // Prefer raw text display for Custom Phrases (when chord is null or explicit rawText is provided)
+    if (rawText && (!chord || chord.name === "Custom Chord" || chord.name === "Custom Arp" || chord.name === "Musical Phrase")) {
         headerContentNotes = generateHTMLFromText(rawText);
     } else {
         headerContentNotes = generateTruncatedNotesHTML(actualNotes);
@@ -150,8 +153,8 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
     // Auto-generate name
     let finalLabel = label;
 
-    // If no label, or generic "Untitled"/"Custom Arp", generate A, B, C...
-    const isGeneric = !finalLabel || finalLabel === 'Untitled' || finalLabel === 'Custom Arp' || finalLabel === 'Custom Chord';
+    // If no label, or generic "Untitled"/"Musical Phrase", generate A, B, C...
+    const isGeneric = !finalLabel || finalLabel === 'Untitled' || finalLabel === 'Custom Arp' || finalLabel === 'Custom Chord' || finalLabel === 'Musical Phrase';
 
     if (isGeneric) {
         if (chord && chord.name && chord.name !== 'Custom Chord') {
@@ -170,6 +173,10 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
 
     renderItemDOM(item, finalLabel, headerContentNotes);
     setupItemEvents(item);
+
+    if (defaultRepeats > 1) {
+        renderRepeatsBadge(item, defaultRepeats);
+    }
 
     if (stageContainer) {
         const placeholder = stageContainer.querySelector('.placeholder-text');

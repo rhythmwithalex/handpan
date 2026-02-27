@@ -1,4 +1,6 @@
 
+import { NOTE_TO_MIDI } from '../data/constants.js';
+
 // Editor Modal UI handling
 
 let editorModal = null;
@@ -19,13 +21,27 @@ export function initEditor(onSave) {
 
     document.getElementById('editor-save-btn')?.addEventListener('click', handleSave);
     document.getElementById('editor-cancel-btn')?.addEventListener('click', closeEditor);
-
-
-
     document.getElementById('close-editor-modal')?.addEventListener('click', closeEditor);
+
+    const infoBtn = document.getElementById('editor-notation-info-btn');
+    const infoModal = document.getElementById('notation-info-modal');
+    const closeInfoBtn = document.getElementById('close-notation-info');
+
+    if (infoBtn && infoModal) {
+        infoBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            infoModal.style.display = 'flex';
+        });
+        closeInfoBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            infoModal.style.display = 'none';
+        });
+    }
+
+    // Previous bare '|' button listener was removed since we generate it dynamically now.
 }
 
-export function openEditor(item, defaultName = '') {
+export function openEditor(item, defaultName = '', currentScale = null) {
     if (!editorModal) return;
 
     currentEditItem = item;
@@ -43,14 +59,6 @@ export function openEditor(item, defaultName = '') {
         if (item.dataset.sourceText) {
             editorInput.value = item.dataset.sourceText;
         } else {
-            // Fallback: reconstruct from JSON (Simple reconstruction)
-            // We can do this here or assume sourceText is always passed.
-            // Given the architecture, let's assume the caller passes the text if they have it, 
-            // OR we read from dataset.
-            // If we really need reconstruction, we can import a helper.
-            // For now, let's try to trust dataset.sourceText.
-            // If missing, we might show empty or try to parse 'notes'.
-            // Let's implement the reconstruction helper here to be safe and helpful.
             editorInput.value = reconstructText(item);
         }
         editorRepeats.value = item.dataset.repeats || 1;
@@ -73,10 +81,86 @@ export function openEditor(item, defaultName = '') {
         clone.style.height = '100%';
         clone.style.display = 'block';
         clone.style.overflow = 'visible';
-        // Remove IDs to prevent duplicate ID issues
         clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
         miniContainer.innerHTML = '';
         miniContainer.appendChild(clone);
+    }
+
+    // Generate fast insert buttons based on currentScale
+    const fastInsertContainer = document.getElementById('editor-fast-insert-buttons');
+    if (fastInsertContainer && currentScale) {
+        fastInsertContainer.innerHTML = '';
+
+        const createBtn = (label, valueToInsert, isSpecial = false) => {
+            const btn = document.createElement('button');
+            btn.className = 'secondary-btn';
+            btn.style.padding = '3px 8px';
+            btn.style.fontSize = '0.75rem';
+            btn.style.border = '1px solid rgba(130, 130, 130, 0.4)';
+            btn.style.borderRadius = '4px';
+            btn.style.backgroundColor = 'transparent';
+            btn.style.color = 'var(--text-color)';
+            btn.style.whiteSpace = 'nowrap';
+            if (isSpecial) btn.style.fontWeight = 'bold';
+            btn.textContent = label;
+            btn.type = 'button';
+
+            btn.onclick = (e) => {
+                e.preventDefault();
+                if (!editorInput) return;
+                const start = editorInput.selectionStart;
+                const end = editorInput.selectionEnd;
+                const val = editorInput.value;
+
+                let insertStr = valueToInsert;
+                if (valueToInsert !== '|' && start > 0 && val[start - 1] !== ' ' && val[start - 1] !== '\n' && val[start - 1] !== '(' && val[start - 1] !== '|') {
+                    insertStr = ' ' + insertStr;
+                }
+
+                editorInput.value = val.substring(0, start) + insertStr + val.substring(end);
+                editorInput.selectionStart = editorInput.selectionEnd = start + insertStr.length;
+                editorInput.focus();
+            };
+            return btn;
+        };
+
+        const parseForSort = (str) => {
+            const clean = str.replace(/^D:/, '');
+            const m = clean.match(/^([A-G][#b]?)([0-8])$/);
+            if (!m) return { note: 'C', octave: 0, value: 0, original: str, clean };
+            const note = m[1];
+            const octave = parseInt(m[2]);
+            const val = (octave * 12) + (NOTE_TO_MIDI[note] || 0);
+            return { note, octave, value: val, original: str, clean };
+        };
+
+        const topNotes = currentScale.top; // array of strings
+        const bottomNotes = Object.keys(currentScale.bottom); // array of strings
+
+        const allNotes = [...topNotes, ...bottomNotes];
+        const parsed = allNotes.map(s => parseForSort(s));
+        parsed.sort((a, b) => a.value - b.value);
+
+        // Render Note Buttons
+        parsed.forEach(p => {
+            fastInsertContainer.appendChild(createBtn(p.clean, p.clean));
+        });
+
+        // Add special buttons separator visually using a small gap
+        const sep = document.createElement('div');
+        sep.style.width = '1px';
+        sep.style.height = '18px';
+        sep.style.background = 'var(--glass-border)';
+        sep.style.margin = '2px 4px 0 4px';
+        fastInsertContainer.appendChild(sep);
+
+        // Add special buttons
+        fastInsertContainer.appendChild(createBtn('|', '|', true));
+        fastInsertContainer.appendChild(createBtn('-', '-', true));
+        fastInsertContainer.appendChild(createBtn('T', 'T', true));
+        fastInsertContainer.appendChild(createBtn('K', 'K', true));
+        fastInsertContainer.appendChild(createBtn('t', 't', true));
+        fastInsertContainer.appendChild(createBtn('k', 'k', true));
     }
 }
 

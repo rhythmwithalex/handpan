@@ -53,14 +53,17 @@ function initApp() {
     initVisualizer();
 
     initChordGrid({
-        addToProgression: (chord, specificNotes, label) => {
-            addChordToProgression(chord, specificNotes, label);
+        addToProgression: (chord, specificNotes, label, rawText, defaultRepeats) => {
+            addChordToProgression(chord, specificNotes, label, rawText, defaultRepeats);
+            if (!document.getElementById('progression-panel').classList.contains('open')) {
+                toggleProgressionPanel();
+            }
             saveCurrentState();
         }
     });
 
     initProgressionUI('progression-stage', {
-        openEditor: (item, defaultName) => openEditor(item, defaultName),
+        openEditor: (item, defaultName) => openEditor(item, defaultName, currentScale),
         onUpdate: () => {
             saveCurrentState();
         },
