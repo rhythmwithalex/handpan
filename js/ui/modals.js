@@ -269,7 +269,11 @@ function generateAndSelectScale(template, key) {
         return s === f ? [s] : [s, f];
     };
 
-    const rootOctave = 3;
+    let rootOctave = 3;
+    // Keys G (7) through B (11) typically use the 2nd octave for the handpan Ding
+    if (rootIndex >= 7) {
+        rootOctave = 2;
+    }
 
     // Calculate Ding (Root) based on user Key selection (force their spelling)
     const ding = `${key}${rootOctave}`;
