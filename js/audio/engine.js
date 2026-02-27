@@ -143,11 +143,19 @@ export function playTone(freq, noteName, duration = 2.4, startTime = 0, suppress
 
 // Global buffer for noise to avoid recreation
 let _noiseBuffer = null;
+let baseKickFreq = 65.41; // Default C2
+
+export function setBaseKickFrequency(freq) {
+    if (freq > 0) baseKickFreq = freq;
+}
 
 export function playTak(startTime, isAlt = false, isGhost = false, suppressVisuals = false) {
     if (!audioCtx) initAudio();
     const t = Math.max(audioCtx.currentTime, startTime || 0);
 
+    // --- Removed Synthetic Kick, manipulating noise filter instead ---
+
+    // --- Original transient click/snap (kept for attack) ---
     if (!_noiseBuffer) {
         const bufferSize = audioCtx.sampleRate * 0.5;
         _noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -164,19 +172,25 @@ export function playTak(startTime, isAlt = false, isGhost = false, suppressVisua
     const filter = audioCtx.createBiquadFilter();
 
     filter.type = 'highpass';
-    filter.frequency.value = isAlt ? 2100 : 1800;
-    filter.Q.value = isAlt ? 1.5 : 1;
+    // Lower the highpass filter frequency to simulate a lower pitched snap for the Ding
+    filter.frequency.value = isAlt ? 2100 : Math.max(800, baseKickFreq * 12); // Scales down with deeper Dings
+    filter.Q.value = isAlt ? 1.5 : 1.2;
 
     source.connect(filter);
     filter.connect(gain);
     gain.connect(audioCtx.destination);
 
     if (reverbNode) {
-        gain.connect(reverbNode);
+        // Create an intermediate gain node to control how much goes to reverb (reduce by 30%)
+        const reverbSendGain = audioCtx.createGain();
+        reverbSendGain.gain.value = 0.7; // 30% less reverb
+        gain.connect(reverbSendGain);
+        reverbSendGain.connect(reverbNode);
     }
 
-    const baseVolume = 0.68; // Lowered by 15% from 0.8
-    const volume = isGhost ? baseVolume * 0.4 : baseVolume;
+    const baseVolume = 0.8; // Restoring original click volume
+    const finalVol = !isAlt ? baseVolume * 0.9 : baseVolume; // Keep it punchy
+    const volume = isGhost ? finalVol * 0.4 : finalVol;
 
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(volume, t + 0.005); // Micro fade-in to avoid clicks

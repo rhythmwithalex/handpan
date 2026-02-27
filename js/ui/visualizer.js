@@ -41,10 +41,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     body.setAttribute("cy", "200");
     body.setAttribute("r", "165");
     body.classList.add("hp-body");
-    body.addEventListener('pointerdown', (e) => {
+    const cancelTak = (e) => {
         // Prevent background Tak from firing when clicking inside the body
         e.stopPropagation();
-    });
+    };
+    body.addEventListener('touchstart', cancelTak, { passive: false });
+    body.addEventListener('mousedown', cancelTak);
     svg.appendChild(body);
 
     // Percussion Visualizer Ring (Dotted/Dashed, hidden by default)
@@ -213,13 +215,16 @@ function createNoteG(noteName, labelText, x, y, r, isDing = false, isBottom = fa
     text.textContent = labelText;
     g.appendChild(text);
 
-    g.addEventListener('pointerdown', (e) => {
+    const triggerNote = (e) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent body click
         if (noteClickCallback) {
             noteClickCallback(cleanName);
         }
-    });
+    };
+
+    g.addEventListener('touchstart', triggerNote, { passive: false });
+    g.addEventListener('mousedown', triggerNote);
     return g;
 }
 

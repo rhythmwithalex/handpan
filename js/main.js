@@ -1,5 +1,5 @@
 
-import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, getAudioContext } from './audio/engine.js';
+import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, getAudioContext, setBaseKickFrequency } from './audio/engine.js';
 import { startProgression, stopProgression, toggleProgression, setProgressionCallbacks, setTempo, isPlaying as isProgressionPlaying } from './logic/progression.js';
 import { loadLastScale, saveLastScale, getAllScales, initCustomScales } from './data/scales.js';
 import { generateChords, parseNoteName, getFrequencyForNoteName } from './logic/chords.js';
@@ -387,6 +387,12 @@ function loadScale(scale, isInitialLoad = false) {
     // Populate Handpan Notes for Logic
     const allNotes = [...scale.top, ...Object.keys(scale.bottom)];
     handpanNotes = allNotes.map(n => parseNoteName(n)).filter(n => n !== null);
+
+    // Set kick drum frequency based on current root note (top[0] is typically the Ding)
+    const dingFreq = getFrequencyForNoteName(scale.top[0]);
+    if (dingFreq) {
+        setBaseKickFrequency(dingFreq);
+    }
 
     // Render SVG
     renderHandpanSVG(currentScale, visualizerMode);

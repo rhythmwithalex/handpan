@@ -402,7 +402,8 @@ body {
 
 .hp-note {
     cursor: pointer;
-    transition: all 0.3s ease;
+    touch-action: none !important;
+    /* Crucial for immediate tap registration */
 }
 
 .hp-note .note-area,
@@ -412,7 +413,6 @@ body {
     stroke: rgba(0, 0, 0, 0.4);
     /* Explicit dark stroke for light mode */
     stroke-width: 1.5;
-    transition: all 0.2s ease;
 }
 
 /* Specific styling for side notes to show they are "bottom" */
