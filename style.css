@@ -492,7 +492,7 @@ body {
 /* Ensure instant color attack for all notes */
 .hp-note.note-active .note-area,
 .hp-note.note-active .note-area-small {
-    transition: all 0.05s ease-out;
+    transition: fill 0s, stroke 0.05s ease-out, filter 0.05s ease-out;
 }
 
 .glass-header {

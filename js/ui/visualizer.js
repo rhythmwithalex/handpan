@@ -266,14 +266,17 @@ function createNoteG(noteName, labelText, x, y, r, isDing = false, isBottom = fa
     const triggerNote = (e) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent body click
+        if (e.type === 'pointerdown') {
+            g.setPointerCapture(e.pointerId);
+        }
         if (noteClickCallback) {
             noteClickCallback(cleanName);
         }
     };
 
-    g.addEventListener('touchstart', triggerNote, { passive: false });
-    g.addEventListener('mousedown', triggerNote);
-    return g;
+    g.addEventListener('pointerdown', triggerNote, { passive: false });
+    // Keep touchstart to purely prevent default scaling/scrolling on older iOS if pointer events fail
+    g.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 }
 
 export function highlightNote(noteName, delaySeconds = 0) {
