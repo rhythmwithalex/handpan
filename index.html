@@ -65,7 +65,7 @@
                             d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
                     </svg>
                 </button>
-                <svg id="handpan-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                <svg id="handpan-svg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
                     <!-- Definitions for metallic gradient -->
                     <defs>
                         <radialGradient id="metallic-gradient" cx="50%" cy="50%" r="50%" fx="35%" fy="30%">
@@ -77,72 +77,73 @@
                     </defs>
 
                     <!-- Main Body -->
-                    <circle cx="200" cy="200" r="165" class="hp-body" />
+                    <circle cx="250" cy="250" r="165" class="hp-body" />
 
                     <!-- Bottom Side Notes Marker (Dashed line) -->
-                    <circle cx="200" cy="200" r="185" fill="none" stroke="var(--glass-border)" stroke-dasharray="4 4"
+                    <circle cx="250" cy="250" r="185" fill="none" stroke="var(--glass-border)" stroke-dasharray="4 4"
                         opacity="0.4" />
 
                     <!-- Ding (Center) -->
                     <g id="note-E3" class="hp-note ding" data-note="E3">
-                        <circle cx="200" cy="200" r="48" class="note-area" />
-                        <text x="200" y="205" text-anchor="middle" class="note-label">E3</text>
+                        <circle cx="250" cy="250" r="48" class="note-area" />
+                        <text x="250" y="255" text-anchor="middle" class="note-label">E3</text>
                     </g>
 
                     <!-- Side Notes (Zigzag Layout) -->
                     <!-- B3: Immediately below E3 -->
                     <g id="note-B3" class="hp-note" data-note="B3">
-                        <circle cx="200" cy="325" r="32" class="note-area" />
-                        <text x="200" y="330" text-anchor="middle" class="note-label">B3</text>
+                        <circle cx="250" cy="375" r="32" class="note-area" />
+                        <text x="250" y="380" text-anchor="middle" class="note-label">B3</text>
                     </g>
                     <!-- D4: Left of B3, E4: Right of B3 -->
                     <g id="note-D4" class="hp-note" data-note="D4">
-                        <circle cx="115" cy="305" r="30" class="note-area" />
-                        <text x="115" y="310" text-anchor="middle" class="note-label">D4</text>
+                        <circle cx="165" cy="355" r="30" class="note-area" />
+                        <text x="165" y="360" text-anchor="middle" class="note-label">D4</text>
                     </g>
                     <g id="note-E4" class="hp-note" data-note="E4">
-                        <circle cx="285" cy="305" r="30" class="note-area" />
-                        <text x="285" y="310" text-anchor="middle" class="note-label">E4</text>
+                        <circle cx="335" cy="355" r="30" class="note-area" />
+                        <text x="335" y="360" text-anchor="middle" class="note-label">E4</text>
                     </g>
                     <!-- F#4: Middle Left, G4: Middle Right -->
                     <g id="note-F#4" class="hp-note" data-note="F#4">
-                        <circle cx="80" cy="210" r="30" class="note-area" />
-                        <text x="80" y="215" text-anchor="middle" class="note-label">F#4</text>
+                        <circle cx="130" cy="260" r="30" class="note-area" />
+                        <text x="130" y="265" text-anchor="middle" class="note-label">F#4</text>
                     </g>
                     <g id="note-G4" class="hp-note" data-note="G4">
-                        <circle cx="320" cy="210" r="30" class="note-area" />
-                        <text x="320" y="215" text-anchor="middle" class="note-label">G4</text>
+                        <circle cx="370" cy="260" r="30" class="note-area" />
+                        <text x="370" y="265" text-anchor="middle" class="note-label">G4</text>
                     </g>
                     <!-- A4: Upper Left, B4: Upper Right -->
                     <g id="note-A4" class="hp-note" data-note="A4">
-                        <circle cx="120" cy="125" r="30" class="note-area" />
-                        <text x="120" y="130" text-anchor="middle" class="note-label">A4</text>
+                        <circle cx="170" cy="175" r="30" class="note-area" />
+                        <text x="170" y="180" text-anchor="middle" class="note-label">A4</text>
+
                     </g>
                     <g id="note-B4" class="hp-note" data-note="B4">
-                        <circle cx="280" cy="125" r="30" class="note-area" />
-                        <text x="280" y="130" text-anchor="middle" class="note-label">B4</text>
+                        <circle cx="330" cy="175" r="30" class="note-area" />
+                        <text x="330" y="180" text-anchor="middle" class="note-label">B4</text>
                     </g>
                     <!-- D5: Top Centerish -->
                     <g id="note-D5" class="hp-note" data-note="D5">
-                        <circle cx="200" cy="85" r="30" class="note-area" />
-                        <text x="200" y="90" text-anchor="middle" class="note-label">D5</text>
+                        <circle cx="250" cy="135" r="30" class="note-area" />
+                        <text x="250" y="140" text-anchor="middle" class="note-label">D5</text>
                     </g>
 
                     <!-- Bottom Shell Notes (Outside the circle) -->
                     <!-- F#3: Outside Left of F#4 -->
                     <g id="note-F#3" class="hp-note side-note" data-note="F#3">
-                        <circle cx="25" cy="205" r="22" class="note-area" />
-                        <text x="25" y="209" text-anchor="middle" class="note-label-small">F#3</text>
+                        <circle cx="75" cy="255" r="22" class="note-area" />
+                        <text x="75" y="259" text-anchor="middle" class="note-label-small">F#3</text>
                     </g>
                     <!-- G3: Outside Right of G4 -->
                     <g id="note-G3" class="hp-note side-note" data-note="G3">
-                        <circle cx="375" cy="205" r="22" class="note-area" />
-                        <text x="375" y="209" text-anchor="middle" class="note-label-small">G3</text>
+                        <circle cx="425" cy="255" r="22" class="note-area" />
+                        <text x="425" y="259" text-anchor="middle" class="note-label-small">G3</text>
                     </g>
                     <!-- E5: Above and Right of B4 -->
                     <g id="note-E5" class="hp-note side-note" data-note="E5">
-                        <circle cx="340" cy="70" r="22" class="note-area" />
-                        <text x="340" y="74" text-anchor="middle" class="note-label-small">E5</text>
+                        <circle cx="390" cy="120" r="22" class="note-area" />
+                        <text x="390" y="124" text-anchor="middle" class="note-label-small">E5</text>
                     </g>
                 </svg>
                 <button id="vis-label-toggle-btn" class="icon-toggle-btn"

@@ -99,8 +99,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Main Body
     const body = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    body.setAttribute("cx", "200");
-    body.setAttribute("cy", "200");
+    body.setAttribute("cx", "250");
+    body.setAttribute("cy", "250");
     body.setAttribute("r", "165");
     body.classList.add("hp-body");
     const cancelTak = (e) => {
@@ -113,8 +113,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Percussion Visualizer Ring (Dotted/Dashed, hidden by default)
     const percRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    percRing.setAttribute("cx", "200");
-    percRing.setAttribute("cy", "200");
+    percRing.setAttribute("cx", "250");
+    percRing.setAttribute("cy", "250");
     percRing.setAttribute("r", "64");
     percRing.setAttribute("fill", "none");
     percRing.classList.add("perc-ring");
@@ -122,8 +122,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Bottom Side Notes Marker (Dashed line)
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    marker.setAttribute("cx", "200");
-    marker.setAttribute("cy", "200");
+    marker.setAttribute("cx", "250");
+    marker.setAttribute("cy", "250");
     marker.setAttribute("r", "185");
     marker.setAttribute("fill", "none");
     marker.setAttribute("stroke", "var(--glass-border)");
@@ -202,9 +202,9 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Render Ding (Center)
     const dingLabel = getLabel(dingName, -1);
-    const dingG = createNoteG(dingName, dingLabel, 200, 200, 43, true);
+    const dingG = createNoteG(dingName, dingLabel, 250, 250, 43, true);
     nodesGroup.appendChild(dingG);
-    notePositions[dingName] = { x: 200, y: 200 };
+    notePositions[dingName] = { x: 250, y: 250 };
 
     // Render Top Side Notes
     const radius = 110;
@@ -221,8 +221,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const stepCount = Math.ceil(i / 2);
         const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
 
-        const x = 200 + radius * Math.cos(angle);
-        const y = 200 + radius * Math.sin(angle);
+        const x = 250 + radius * Math.cos(angle);
+        const y = 250 + radius * Math.sin(angle);
         const r = (isExtraDing ? 46 : 36) * scaleFactor;
 
         const label = getLabel(name, i);
@@ -238,12 +238,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const parentPos = notePositions[parent];
         if (!parentPos) return;
 
-        const dx = parentPos.x - 200;
-        const dy = parentPos.y - 200;
+        const dx = parentPos.x - 250;
+        const dy = parentPos.y - 250;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         const outerRadius = 185;
-        const x = 200 + (dx / dist) * outerRadius;
-        const y = 200 + (dy / dist) * outerRadius;
+        const x = 250 + (dx / dist) * outerRadius;
+        const y = 250 + (dy / dist) * outerRadius;
         const r = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
 
         const label = getLabel(note, topSideNotes.length + i);
