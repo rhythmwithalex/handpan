@@ -404,6 +404,11 @@ function renderRepeatsBadge(item, repeats) {
 }
 
 export function clearProgression(triggerSave = true) {
+    if (triggerSave) {
+        const confirmClear = window.confirm("Are you sure you want to clear the Progression Stage?");
+        if (!confirmClear) return;
+    }
+
     if (stageContainer) {
         stageContainer.innerHTML = '<div class="placeholder-text">Click + on a card to add to progression</div>';
     }
