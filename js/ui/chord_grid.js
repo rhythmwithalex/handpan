@@ -87,127 +87,154 @@ export function renderChordGrid(chords, dingNotes) {
         return map[semitones] || '?';
     };
 
-    // Sort or Use Default
-    let displayChords = [...chords];
-    if (isSortedByPitch) {
-        // 2. Define Type Priority
-        const typePriority = {
-            'Major': 0, 'Minor': 0, 'Maj7': 0, 'Min7': 0, 'Dim': 0, 'Min7b5': 0, 'Dim7': 0,
-            'Sus2': 1, 'Sus4': 1,
-            '5': 2,
-            'M3': 3, 'm3': 3 // Dyads last
-        };
-        const getPriority = (type) => typePriority[type] !== undefined ? typePriority[type] : 4;
+    // Categorize Chords
+    const mainChords = [];
+    const dyadChords = [];
+    const colorChords = [];
 
-        displayChords.sort((a, b) => {
-            const rootA = a.root;
-            const rootB = b.root;
-
-            // Priority 1: Scale Degree Order (Relative to Ding)
-            // Calculate semitone distance from Ding (0-11)
-            const valA = ((NOTE_TO_MIDI[rootA] || 0) - (dingVal || 0) + 12) % 12;
-            const valB = ((NOTE_TO_MIDI[rootB] || 0) - (dingVal || 0) + 12) % 12;
-
-            if (valA !== valB) return valA - valB;
-
-            // Priority 2: Type Relevance 
-            const pA = getPriority(a.type);
-            const pB = getPriority(b.type);
-            if (pA !== pB) return pA - pB;
-
-            // Priority 3: Alphabetical Type
-            return a.type.localeCompare(b.type);
-        });
-    }
-
-    displayChords.forEach(chord => {
-        const card = document.createElement('div');
-        card.className = 'glass-card chord-card'; // Removed 'compact' to match original style if needed
-
-        // Add type-specific class for color coding
-        const cType = chord.type;
-        if (cType === 'Major' || cType === 'Maj7' || cType === 'M3') card.classList.add('type-major');
-        else if (cType === 'Minor' || cType === 'Min7' || cType === 'm3') card.classList.add('type-minor');
-        else if (cType.includes('Sus')) card.classList.add('type-sus');
-        else if (cType === '5') card.classList.add('type-power');
-        else if (cType === '7' || cType.includes('Dim') || cType === 'Min7b5') card.classList.add('type-seventh');
-
-        const baseNotes = [...new Set(chord.notes.map(n => n.note))];
-
-        // Sort notes by interval from root (Root, 3rd, 5th...)
-        const rootVal = NOTE_TO_MIDI[chord.root];
-        baseNotes.sort((a, b) => {
-            const valA = (NOTE_TO_MIDI[a] - rootVal + 12) % 12;
-            const valB = (NOTE_TO_MIDI[b] - rootVal + 12) % 12;
-            return valA - valB;
-        });
-
-        // Render Note Badges
-        const noteBadges = baseNotes.map(n => `<span class="note-badge" style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${n}</span>`).join('');
-
-        // Interval Display
-        const degree = getDegreeName(chord.root);
-        const degreeHTML = degree ? `<span style="font-size:0.8em; opacity: 0.5; font-weight:normal; margin-left:6px;">(${degree})</span>` : '';
-
-        card.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-                <!-- Row 1: Title -->
-                <div style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
-                    <h2 style="margin: 0; font-size: 1.2rem; color: var(--text-main);">${chord.root}${degreeHTML} <span style="font-weight:300; font-size: 0.9em; opacity: 0.9;">${chord.type}</span></h2>
-                </div>
-                <!-- Row 2: Notes & Options -->
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; gap: 4px; flex-wrap: wrap; flex: 1;">
-                        ${noteBadges}
-                    </div>
-                    <button class="icon-btn open-options" title="View Options" style="font-size: 0.8rem; padding: 4px 8px; margin-left: 10px;">▼</button>
-                </div>
-                <!-- Row 3: Add Buttons -->
-                <div style="display: flex; gap: 8px; margin-top: 4px;">
-                    <button class="premium-btn-small add-chord" title="Add Arpeggio" style="flex: 1; padding: 6px 0; font-size: 0.85rem;">Arpeggio +</button>
-                    <button class="premium-btn-small add-chord-sim" title="Add as Chord (Simultaneous)" style="flex: 1; padding: 6px 0; font-size: 0.85rem;">Chord |+</button>
-                </div>
-            </div>
-        `;
-
-        // Interactions
-        const openBtn = card.querySelector('.open-options');
-        const addSimBtn = card.querySelector('.add-chord-sim');
-        const addBtn = card.querySelector('.add-chord');
-
-        // Toggle Modal (via button)
-        openBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openVoicingModal(chord, dingNotes);
-        };
-
-        addSimBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (dependencies.addToProgression) {
-                dependencies.addToProgression(chord, null, null, null, 4, true); // true for isSimultaneous
-            }
-        };
-
-        addBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (dependencies.addToProgression) {
-                dependencies.addToProgression(chord, null, null, null, 4, false); // default sequential
-            }
-        };
-
-        // Play Audio (via card click)
-        card.onclick = (e) => {
-            // detailed interactions managed by buttons, card click plays
-            if (!e.target.closest('button')) {
-                playChordStub(chord);
-            }
-        };
-
-        grid.appendChild(card);
+    chords.forEach(chord => {
+        const t = chord.type;
+        if (t === 'Major' || t === 'Minor') {
+            mainChords.push(chord);
+        } else if (t === '5' || t === 'M3' || t === 'm3') {
+            dyadChords.push(chord);
+        } else {
+            colorChords.push(chord);
+        }
     });
+
+    // Helper to get exact lowest pitch value of the root note for a chord
+    const getRootPitchValue = (chord) => {
+        // Find the specific note object in the arpeggio that matches the chord root
+        const rootNoteObj = chord.arpeggio.find(n => n.note === chord.root);
+        // If it exists, use its absolute midi value, otherwise use a generic high number
+        return rootNoteObj ? rootNoteObj.value : 999;
+    };
+
+    const sortByRootPitch = (a, b) => {
+        return getRootPitchValue(a) - getRootPitchValue(b);
+    };
+
+    mainChords.sort(sortByRootPitch);
+    dyadChords.sort(sortByRootPitch);
+    colorChords.sort(sortByRootPitch);
+
+    const renderChordList = (chordList, title) => {
+        if (chordList.length === 0) return;
+
+        // Container for category
+        const section = document.createElement('div');
+        section.style.gridColumn = "1 / -1";
+        section.style.marginBottom = "20px";
+
+        const header = document.createElement('h3');
+        header.textContent = title;
+        header.style.color = "var(--text-main)";
+        header.style.borderBottom = "1px solid rgba(255,255,255,0.1)";
+        header.style.paddingBottom = "5px";
+        header.style.marginBottom = "15px";
+        header.style.fontSize = "1.1rem";
+        section.appendChild(header);
+
+        const subGrid = document.createElement('div');
+        subGrid.className = 'card-grid'; // Reuse layout mechanics internally
+        subGrid.style.display = "grid";
+        subGrid.style.gap = "15px";
+        subGrid.style.gridTemplateColumns = "repeat(auto-fill, minmax(280px, 1fr))";
+
+        chordList.forEach(chord => {
+            const card = document.createElement('div');
+            card.className = 'glass-card chord-card';
+
+            // Add type-specific class for color coding
+            const cType = chord.type;
+            if (cType === 'Major' || cType === 'Maj7' || cType === 'M3') card.classList.add('type-major');
+            else if (cType === 'Minor' || cType === 'Min7' || cType === 'm3') card.classList.add('type-minor');
+            else if (cType.includes('Sus')) card.classList.add('type-sus');
+            else if (cType === '5') card.classList.add('type-power');
+            else if (cType === '7' || cType.includes('Dim') || cType === 'Min7b5') card.classList.add('type-seventh');
+
+            const baseNotes = [...new Set(chord.notes.map(n => n.note))];
+
+            // Sort notes by interval from root
+            const rootVal = NOTE_TO_MIDI[chord.root];
+            baseNotes.sort((a, b) => {
+                const valA = (NOTE_TO_MIDI[a] - rootVal + 12) % 12;
+                const valB = (NOTE_TO_MIDI[b] - rootVal + 12) % 12;
+                return valA - valB;
+            });
+
+            // Render Note Badges
+            const noteBadges = baseNotes.map(n => `<span class="note-badge" style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${n}</span>`).join('');
+
+            // Interval Display
+            const degree = getDegreeName(chord.root);
+            const degreeHTML = degree ? `<span style="font-size:0.8em; opacity: 0.5; font-weight:normal; margin-left:6px;">(${degree})</span>` : '';
+
+            card.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                    <!-- Row 1: Title -->
+                    <div style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                        <h2 style="margin: 0; font-size: 1.2rem; color: var(--text-main);">${chord.root}${degreeHTML} <span style="font-weight:300; font-size: 0.9em; opacity: 0.9;">${chord.type}</span></h2>
+                    </div>
+                    <!-- Row 2: Notes & Options -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap; flex: 1;">
+                            ${noteBadges}
+                        </div>
+                        <button class="icon-btn open-options" title="View Options" style="font-size: 0.8rem; padding: 4px 8px; margin-left: 10px;">▼</button>
+                    </div>
+                    <!-- Row 3: Add Buttons -->
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        <button class="premium-btn-small add-chord" title="Add Arpeggio" style="flex: 1; padding: 6px 0; font-size: 0.85rem;">Arpeggio +</button>
+                        <button class="premium-btn-small add-chord-sim" title="Add as Chord (Simultaneous)" style="flex: 1; padding: 6px 0; font-size: 0.85rem;">Chord |+</button>
+                    </div>
+                </div>
+            `;
+
+            // Interactions
+            const openBtn = card.querySelector('.open-options');
+            const addSimBtn = card.querySelector('.add-chord-sim');
+            const addBtn = card.querySelector('.add-chord');
+
+            openBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openVoicingModal(chord, dingNotes);
+            };
+
+            addSimBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dependencies.addToProgression) {
+                    dependencies.addToProgression(chord, null, null, null, 4, true);
+                }
+            };
+
+            addBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dependencies.addToProgression) {
+                    dependencies.addToProgression(chord, null, null, null, 4, false);
+                }
+            };
+
+            card.onclick = (e) => {
+                if (!e.target.closest('button')) {
+                    playChordStub(chord);
+                }
+            };
+
+            subGrid.appendChild(card);
+        });
+
+        section.appendChild(subGrid);
+        grid.appendChild(section);
+    };
+
+    renderChordList(mainChords, "Main Chords (Triads)");
+    renderChordList(dyadChords, "Basic Dyads");
+    renderChordList(colorChords, "Color Chords");
 }
 
 function openVoicingModal(chord, dingNotes) {

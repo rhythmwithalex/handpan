@@ -97,11 +97,21 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     svg.appendChild(defs);
 
+    const layout = {
+        cx: 250,
+        cy: 250,
+        rBody: 165,
+        rRing: 64,
+        rMarker: 185,
+        rNotesTop: 110,
+        rNotesBottom: 185
+    };
+
     // Main Body
     const body = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    body.setAttribute("cx", "250");
-    body.setAttribute("cy", "250");
-    body.setAttribute("r", "165");
+    body.setAttribute("cx", layout.cx);
+    body.setAttribute("cy", layout.cy);
+    body.setAttribute("r", layout.rBody);
     body.classList.add("hp-body");
     const cancelTak = (e) => {
         // Prevent background Tak from firing when clicking inside the body
@@ -113,18 +123,18 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Percussion Visualizer Ring (Dotted/Dashed, hidden by default)
     const percRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    percRing.setAttribute("cx", "250");
-    percRing.setAttribute("cy", "250");
-    percRing.setAttribute("r", "64");
+    percRing.setAttribute("cx", layout.cx);
+    percRing.setAttribute("cy", layout.cy);
+    percRing.setAttribute("r", layout.rRing);
     percRing.setAttribute("fill", "none");
     percRing.classList.add("perc-ring");
     svg.appendChild(percRing);
 
     // Bottom Side Notes Marker (Dashed line)
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    marker.setAttribute("cx", "250");
-    marker.setAttribute("cy", "250");
-    marker.setAttribute("r", "185");
+    marker.setAttribute("cx", layout.cx);
+    marker.setAttribute("cy", layout.cy);
+    marker.setAttribute("r", layout.rMarker);
     marker.setAttribute("fill", "none");
     marker.setAttribute("stroke", "var(--glass-border)");
     marker.setAttribute("stroke-dasharray", "4 4");
@@ -202,12 +212,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Render Ding (Center)
     const dingLabel = getLabel(dingName, -1);
-    const dingG = createNoteG(dingName, dingLabel, 250, 250, 43, true);
+    const dingG = createNoteG(dingName, dingLabel, layout.cx, layout.cy, 43, true);
     nodesGroup.appendChild(dingG);
-    notePositions[dingName] = { x: 250, y: 250 };
+    notePositions[dingName] = { x: layout.cx, y: layout.cy };
 
     // Render Top Side Notes
-    const radius = 110;
+    const radius = layout.rNotesTop;
     const N = topSideNotes.length;
     const stepAngle = (2 * Math.PI) / N;
 
@@ -221,8 +231,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const stepCount = Math.ceil(i / 2);
         const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
 
-        const x = 250 + radius * Math.cos(angle);
-        const y = 250 + radius * Math.sin(angle);
+        const x = layout.cx + radius * Math.cos(angle);
+        const y = layout.cy + radius * Math.sin(angle);
         const r = (isExtraDing ? 46 : 36) * scaleFactor;
 
         const label = getLabel(name, i);
@@ -238,12 +248,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const parentPos = notePositions[parent];
         if (!parentPos) return;
 
-        const dx = parentPos.x - 250;
-        const dy = parentPos.y - 250;
+        const dx = parentPos.x - layout.cx;
+        const dy = parentPos.y - layout.cy;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const outerRadius = 185;
-        const x = 250 + (dx / dist) * outerRadius;
-        const y = 250 + (dy / dist) * outerRadius;
+        const outerRadius = layout.rNotesBottom;
+        const x = layout.cx + (dx / dist) * outerRadius;
+        const y = layout.cy + (dy / dist) * outerRadius;
         const r = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
 
         const label = getLabel(note, topSideNotes.length + i);
