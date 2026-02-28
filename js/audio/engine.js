@@ -121,15 +121,20 @@ export function playTone(freq, noteName, duration = 2.4, startTime = 0, suppress
         nodes.push(osc);
     });
 
-    // Dynamic Volume Boost for Bass Notes (Ding)
-    // Mobile speakers struggle with <200Hz, so we boost the gain by up to 30% for low notes
+    // Dynamic Volume Balance
+    // Boost low notes (Ding) and tame high notes for a balanced mix
     let volMult = 1.0;
     if (freq < 150) {
-        volMult = 1.3; // +30% for deep Dings
+        volMult = 1.8; // Strong boost for deep Dings
     } else if (freq < 300) {
-        // Interpolate between 1.3 and 1.0 for the mid-low range
+        // Interpolate between 1.8 and 1.0 for the mid-low range
         const t = (freq - 150) / 150;
-        volMult = 1.3 - (0.3 * t);
+        volMult = 1.8 - (0.8 * t);
+    } else if (freq > 400) {
+        // Tame harsh high notes
+        // Interpolate between 1.0 and 0.5 up to 800Hz
+        const t = Math.min((freq - 400) / 400, 1);
+        volMult = 1.0 - (0.5 * t);
     }
 
     const peakVolume = 0.8 * volMult;
