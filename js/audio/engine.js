@@ -141,8 +141,10 @@ export function playTone(freq, noteName, duration = 2.4, startTime = 0, suppress
     const sustainVolume = 0.5 * volMult;
 
     masterGain.gain.setValueAtTime(0, t);
-    masterGain.gain.linearRampToValueAtTime(peakVolume, t + 0.01); // 10ms micro fade-in to prevent popping
-    masterGain.gain.exponentialRampToValueAtTime(sustainVolume, t + 0.08);
+    // 25ms micro fade-in to soften the attack and prevent speaker crackling/clipping
+    masterGain.gain.linearRampToValueAtTime(peakVolume, t + 0.025);
+    // Smooth decay to sustain level
+    masterGain.gain.exponentialRampToValueAtTime(sustainVolume, t + 0.12);
     masterGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
     const nodeRef = { oscs: nodes, gainNode: masterGain };
