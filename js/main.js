@@ -157,6 +157,38 @@ function initApp() {
         });
     }
 
+    // Help Modal (Save/Share)
+    const saveShareHelpModal = document.getElementById('save-share-help-modal');
+    const helpBtn = document.getElementById('help-save-share-btn');
+    const closeHelpBtn = document.getElementById('close-save-share-help');
+
+    if (helpBtn && saveShareHelpModal) {
+        helpBtn.addEventListener('click', () => {
+            saveShareHelpModal.style.display = 'flex';
+        });
+
+        const closeHelp = () => {
+            saveShareHelpModal.style.display = 'none';
+        };
+
+        if (closeHelpBtn) closeHelpBtn.addEventListener('click', closeHelp);
+
+        const secondaryHelpBtns = saveShareHelpModal.querySelectorAll('.close-save-share-btn-secondary');
+        secondaryHelpBtns.forEach(btn => btn.addEventListener('click', closeHelp));
+
+        saveShareHelpModal.addEventListener('click', (e) => {
+            if (e.target === saveShareHelpModal) {
+                closeHelp();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && saveShareHelpModal.style.display === 'flex') {
+                closeHelp();
+            }
+        });
+    }
+
     // 7. Save/Load Composition Modals
     let currentLoadedCompName = '';
     let currentLoadedCompCategory = '';

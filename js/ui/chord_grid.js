@@ -147,7 +147,7 @@ export function renderChordGrid(chords, dingNotes) {
 
         // Interval Display
         const degree = getDegreeName(chord.root);
-        const degreeHTML = degree ? `<span style="font-size:0.8em; color:rgba(255,255,255,0.5); font-weight:normal; margin-left:6px;">(${degree})</span>` : '';
+        const degreeHTML = degree ? `<span style="font-size:0.8em; opacity: 0.5; font-weight:normal; margin-left:6px;">(${degree})</span>` : '';
 
         card.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">

@@ -66,6 +66,16 @@
                     </svg>
                 </button>
                 <svg id="handpan-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                    <!-- Definitions for metallic gradient -->
+                    <defs>
+                        <radialGradient id="metallic-gradient" cx="50%" cy="50%" r="50%" fx="35%" fy="30%">
+                            <stop offset="0%" stop-color="#f8f9fa" />
+                            <stop offset="50%" stop-color="#e2e6ea" />
+                            <stop offset="90%" stop-color="#ced4da" />
+                            <stop offset="100%" stop-color="#adb5bd" />
+                        </radialGradient>
+                    </defs>
+
                     <!-- Main Body -->
                     <circle cx="200" cy="200" r="165" class="hp-body" />
 
@@ -155,10 +165,14 @@
                         <button id="share-progression" class="clear-btn" title="Share Progression Link">🔗</button>
                         <button id="clear-progression" class="clear-btn" title="Clear All">–</button>
                     </div>
-                    <button id="play-progression-btn" class="premium-btn" title="Play"
-                        style="padding: 10px 0; font-size: 0.95rem; width: 120px; text-align: center;">
-                        Play ▶
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button id="help-save-share-btn" class="icon-btn" title="How to Save & Share"
+                            style="background: rgba(255,255,255,0.2); border: 1px solid rgba(0,0,0,0.1); border-radius: 50%; width: 28px; height: 28px; font-size: 0.8rem; flex-shrink: 0; color: var(--text-main); display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer;">?</button>
+                        <button id="play-progression-btn" class="premium-btn" title="Play"
+                            style="padding: 10px 0; font-size: 0.95rem; width: 120px; text-align: center;">
+                            Play ▶
+                        </button>
+                    </div>
                 </div>
                 <div class="progression-right-group">
                     <div class="control-group">
@@ -273,50 +287,95 @@
         </div>
     </div>
 
+    <!-- Save/Share Help Modal -->
+    <div id="save-share-help-modal" class="modal-overlay" style="display: none; z-index: 2200;">
+        <div class="modal-content glass-card" style="max-width: 450px; padding: 25px;">
+            <div class="modal-header" style="margin-bottom: 20px;">
+                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0;">How to Save & Share
+                </h2>
+                <button id="close-save-share-help" class="close-btn" style="top: -5px; right: 0;">&times;</button>
+            </div>
+            <div class="modal-body"
+                style="display: flex; flex-direction: column; gap: 10px; font-size: 0.95rem; line-height: 1.5; color: var(--text-main);">
+                <p style="margin-bottom: 4px; font-size: 1.05rem;">It's exciting, you can save your compositions and
+                    share them with friends!</p>
+
+                <p><strong>💾 Local Saving:</strong><br>
+                    Click the Floppy Disk icon to save your current Progression Stage.
+                    Compositions are saved <em>locally</em> in your web browser.
+                    If you clear your browser's data or use a different device, your saved songs won't be there.</p>
+
+                <p><strong>📂 Loading:</strong><br>
+                    Click the Folder icon to view and load your saved compositions. You can organize them by adding a
+                    category name when saving.</p>
+
+                <p><strong>🔗 Sharing with Friends:</strong><br>
+                    Click the Link icon to generate a special URL containing your exact melody and handpan scale.
+                    When you share this link, anyone who opens it will see your progression loaded automatically, even
+                    if they've never visited the site before!</p>
+
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <button class="premium-btn close-save-share-btn-secondary"
+                        style="border-radius: 20px; padding: 8px 20px;">Got it</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Editor Modal -->
     <div id="editor-modal" class="modal-overlay" style="display: none; z-index: 2000;">
-        <div class="modal-content glass-card" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2>Edit Musical Phrase</h2>
-                <button id="close-editor-modal" class="close-btn">&times;</button>
+        <div class="modal-content glass-card" style="max-width: 420px; padding: 25px;">
+            <div class="modal-header" style="margin-bottom: 20px;">
+                <h2 style="font-size: 1.6rem; font-weight: 700; color: var(--text-main); margin: 0;">Edit Musical Phrase
+                </h2>
+                <button id="close-editor-modal" class="close-btn" style="top: -5px; right: 0;">&times;</button>
             </div>
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="editor-name" placeholder="Part Name (e.g. Intro)" class="premium-text-input"
-                        style="flex: 1;">
-                </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                    <p style="font-size: 0.75rem; opacity: 0.8; margin: 0; line-height: 1.3; flex: 1;">
-                        Enter notes ("E3 G3 B3") or numbers ("1 2 3", also "D" is the main ding, "-" is a pause, and T,
-                        K or t, k are body hits).
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Part Name Input -->
+                <input type="text" id="editor-name" placeholder="Part Name (e.g. Intro)" class="premium-text-input"
+                    style="font-size: 1.05rem; padding: 14px; background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0,0,0,0.1); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02)">
+
+                <!-- Hint Text Box -->
+                <div
+                    style="background: rgba(0,0,0,0.02); border-radius: 12px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; border: 1px solid rgba(0,0,0,0.05);">
+                    <p style="font-size: 0.8rem; opacity: 0.7; margin: 0; line-height: 1.4; flex: 1;">
+                        Enter notes ("E3 G3 B3") or numbers ("1 2 3"). "D" for ding. For pause use "-" , "T" and "K" are
+                        body hits.
                     </p>
-                    <button id="editor-notation-info-btn" class="secondary-btn"
-                        style="padding: 2px 8px; font-size: 0.8rem; flex-shrink: 0;"
-                        title="Detailed Notation Info">...</button>
+                    <button id="editor-notation-info-btn" class="icon-btn"
+                        style="background: white; border: 1px solid #eee; border-radius: 50%; width: 24px; height: 24px; font-size: 0.7rem; flex-shrink: 0; color: #555; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+                        title="Detailed Notation Info">?</button>
                 </div>
 
-                <div id="editor-fast-insert-buttons" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
-                    <!-- Buttons will be injected here by JS -->
+                <!-- Fast Insert Buttons -->
+                <div id="editor-fast-insert-buttons" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    <!-- Buttons will be injected here by JS, but we will style them nicer via JS -->
                 </div>
 
+                <!-- Main Textarea -->
                 <textarea id="editor-input" rows="3" class="premium-text-input"
-                    style="font-family: inherit; resize: vertical; min-height: 60px;"></textarea>
+                    style="font-family: monospace; font-size: 1.1rem; resize: vertical; min-height: 80px; padding: 14px; background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0,0,0,0.1); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);"></textarea>
 
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label style="font-size: 0.9rem; opacity: 0.8;">Repeats:</label>
-                    <input type="number" id="editor-repeats" min="1" max="16" value="1" class="premium-text-input"
-                        style="width: 60px;">
-                </div>
+                <!-- Repeats and Actions Row -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <div
+                        style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.03); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.05);">
+                        <label style="font-size: 0.85rem; font-weight: 500; opacity: 0.7;">Repeats</label>
+                        <input type="number" id="editor-repeats" min="1" max="16" value="1"
+                            style="width: 40px; border: none; background: transparent; font-size: 1rem; font-weight: bold; color: var(--text-main); text-align: center; outline: none; -moz-appearance: textfield; appearance: none;">
+                    </div>
 
-                <div class="modal-footer"
-                    style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                    <button id="editor-cancel-btn" class="secondary-btn">Cancel</button>
-                    <button id="editor-save-btn" class="premium-btn">Save Changes</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="editor-cancel-btn"
+                            style="background: transparent; border: 1px solid rgba(0,0,0,0.1); border-radius: 20px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; color: var(--text-main); transition: background 0.2s;">Cancel</button>
+                        <button id="editor-save-btn" class="premium-btn"
+                            style="border-radius: 20px; padding: 8px 20px; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);">Save</button>
+                    </div>
                 </div>
 
                 <!-- Mini diagram injected here via JS -->
-                <div id="editor-mini-handpan" class="mini-handpan-container">
+                <div id="editor-mini-handpan" class="mini-handpan-container" style="margin-top: 10px;">
                 </div>
             </div>
         </div>
@@ -377,7 +436,8 @@
                     <code>1 2 3</code>.
                 </div>
                 <div style="margin-bottom: 8px;"><strong>Ding:</strong> The lowest central note. Enter as
-                    <code>D</code>.</div>
+                    <code>D</code>.
+                </div>
                 <div style="margin-bottom: 8px;"><strong>Pauses:</strong> Enter <code>-</code> for a rest/pause.</div>
                 <div style="margin-bottom: 8px;"><strong>Percussion (Body Hits):</strong></div>
                 <ul style="margin-top: 5px; margin-bottom: 15px; padding-left: 20px;">

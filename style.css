@@ -365,9 +365,8 @@ body {
 }
 
 .hp-body {
-    fill: rgba(255, 255, 255, 0.05);
-    stroke: rgba(0, 0, 0, 0.5);
-    /* Stronger contrast */
+    fill: url(#metallic-body-light);
+    stroke: #b0b5bd;
     stroke-width: 1.5;
 }
 
@@ -395,9 +394,8 @@ body {
 }
 
 .dark-mode .hp-body {
-    fill: rgba(0, 0, 0, 0.2);
-    stroke: rgba(255, 255, 255, 0.3);
-    /* Light line to define the handpan circle */
+    fill: url(#metallic-body-dark);
+    stroke: rgba(255, 255, 255, 0.2);
 }
 
 .hp-note {
@@ -408,8 +406,7 @@ body {
 
 .hp-note .note-area,
 .hp-note .note-area-small {
-    fill: rgba(255, 255, 255, 0.2);
-    /* More opaque fill */
+    fill: url(#metallic-note-light);
     stroke: rgba(0, 0, 0, 0.4);
     /* Explicit dark stroke for light mode */
     stroke-width: 1.5;
@@ -419,15 +416,22 @@ body {
 .hp-note.side-note .note-area {
     stroke-dasharray: 2 2;
     fill: rgba(0, 0, 0, 0.02);
+    /* Don't gradient the invisible ghost notes */
 }
 
 .dark-mode .hp-note.side-note .note-area {
     fill: rgba(255, 255, 255, 0.02);
 }
 
+.dark-mode .hp-note .note-area,
+.dark-mode .hp-note .note-area-small {
+    fill: url(#metallic-note-dark);
+    stroke: rgba(255, 255, 255, 0.2);
+}
+
 .hp-note:hover .note-area,
 .hp-note:hover .note-area-small {
-    fill: rgba(255, 255, 255, 0.2);
+    fill: rgba(255, 255, 255, 0.5);
     stroke: var(--accent-color);
 }
 
@@ -1270,7 +1274,7 @@ body:not(.dark-mode) .premium-btn-small {
 .progression-item {
     background: var(--primary-gradient);
     min-width: 140px;
-    padding: 10px 20px;
+    padding: 10px 65px 10px 20px;
     border-radius: 15px;
     position: relative;
     display: flex;
@@ -1406,8 +1410,11 @@ body:not(.dark-mode) .premium-btn-small {
     border-radius: 4px;
     font-weight: bold;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    pointer-events: none;
-    /* Let clicks pass through */
+    pointer-events: auto;
+    user-select: none;
+    touch-action: none;
+    /* Prevent browser scrolling when swiping on the badge */
+    /* Let clicks pass through if needed, but we now process them */
 }
 
 /* Modal Base Styles */

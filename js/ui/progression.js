@@ -259,11 +259,16 @@ function renderItemDOM(item, label, notesHTML) {
 
     const editIcon = document.createElement('span');
     editIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.7;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
-    editIcon.title = "Edit";
+    editIcon.style.cursor = 'pointer';
+    editIcon.style.display = 'inline-flex';
+    editIcon.style.alignItems = 'center';
 
-    const duplicateBtn = document.createElement('button');
-    duplicateBtn.className = 'icon-btn';
+    const duplicateBtn = document.createElement('span');
     duplicateBtn.title = "Duplicate";
+    duplicateBtn.style.opacity = '0.7';
+    duplicateBtn.style.cursor = 'pointer';
+    duplicateBtn.style.display = 'inline-flex';
+    duplicateBtn.style.alignItems = 'center';
     duplicateBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
     duplicateBtn.onclick = (e) => {
         e.stopPropagation();
@@ -315,15 +320,86 @@ function setupItemEvents(item) {
 
 function renderRepeatsBadge(item, repeats) {
     let b = item.querySelector('.repeat-badge');
+
+    // Always create or ensure badge exists if we might want to interact with it, 
+    // but the user only wants it visible if > 1 traditionally. 
+    // To allow incrementing from 1 to 2 via swipe, the badge must be visible or we attach events to the item itself.
+    // The prompt says "свайп на цифре повторов", which implies the badge is there.
+    // Let's always show the badge if it's interacted with, or just attach events to the badge.
+
+    if (!b) {
+        b = document.createElement('div');
+        b.className = 'repeat-badge';
+        b.style.cursor = 'ns-resize'; // indicate it can be changed
+        item.appendChild(b);
+
+        // --- Interaction Logic (Click & Swipe) ---
+        let startY = 0;
+        let isDragging = false;
+
+        const updateRepeats = (delta) => {
+            let current = parseInt(item.dataset.repeats) || 1;
+            current += delta;
+            if (current < 1) current = 1;
+            if (current > 16) current = 16; // arbitrary max
+            item.dataset.repeats = current;
+            renderRepeatsBadge(item, current);
+            if (dependencies.onUpdate) dependencies.onUpdate();
+        };
+
+        // Click / Shift-Click
+        b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (e.shiftKey) {
+                updateRepeats(-1);
+            } else {
+                updateRepeats(1);
+            }
+        });
+
+        // Touch Swipe (Mobile)
+        b.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            startY = e.touches[0].clientY;
+            isDragging = true;
+        }, { passive: true });
+
+        b.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.stopPropagation();
+            const currentY = e.touches[0].clientY;
+            const diff = startY - currentY;
+
+            // Threshold for swipe (e.g. 15px)
+            if (Math.abs(diff) > 15) {
+                if (diff > 0) updateRepeats(1);  // Swipe Up -> Increase
+                else updateRepeats(-1);           // Swipe Down -> Decrease
+
+                startY = currentY; // reset start to require another 15px for next increment
+            }
+        }, { passive: true });
+
+        b.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+            isDragging = false;
+        });
+
+        // Let's also prevent dragstart on the badge so it doesn't interfere with card reordering
+        b.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    }
+
+    b.textContent = `x${repeats}`;
+    b.style.display = 'flex';
+
     if (repeats > 1) {
-        if (!b) {
-            b = document.createElement('div');
-            b.className = 'repeat-badge';
-            item.appendChild(b);
-        }
-        b.textContent = `x${repeats}`;
+        b.style.opacity = '1';
     } else {
-        if (b) b.remove();
+        // Show x1 slightly faded out so user knows they can interact with it
+        b.style.opacity = '0.3';
+        item.dataset.repeats = 1; // ensure state is clean
     }
 }
 

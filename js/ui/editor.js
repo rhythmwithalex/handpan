@@ -98,17 +98,36 @@ export function openEditor(item, defaultName = '', currentScale = null) {
 
         const createBtn = (label, valueToInsert, isSpecial = false) => {
             const btn = document.createElement('button');
-            btn.className = 'secondary-btn';
-            btn.style.padding = '3px 8px';
-            btn.style.fontSize = '0.75rem';
-            btn.style.border = '1px solid rgba(130, 130, 130, 0.4)';
-            btn.style.borderRadius = '4px';
-            btn.style.backgroundColor = 'transparent';
-            btn.style.color = 'var(--text-color)';
+            btn.className = 'fast-insert-btn';
+            btn.style.padding = '5px 10px';
+            btn.style.fontSize = '0.85rem';
+            btn.style.border = '1px solid rgba(0, 0, 0, 0.08)';
+            btn.style.borderRadius = '8px';
+            btn.style.backgroundColor = 'rgba(0,0,0,0.03)';
+            btn.style.color = 'var(--text-main)';
             btn.style.whiteSpace = 'nowrap';
-            if (isSpecial) btn.style.fontWeight = 'bold';
+            btn.style.cursor = 'pointer';
+            btn.style.transition = 'all 0.2s ease';
+            if (isSpecial) {
+                btn.style.fontWeight = 'bold';
+                btn.style.backgroundColor = 'rgba(0,0,0,0.06)';
+            }
             btn.textContent = label;
             btn.type = 'button';
+
+            // Add hover effect via JS since it's an inline-styled element (or we can just rely on the class we add)
+            btn.onmouseover = () => {
+                btn.style.backgroundColor = 'var(--accent-color)';
+                btn.style.color = '#000';
+                btn.style.borderColor = 'var(--accent-color)';
+                btn.style.transform = 'translateY(-1px)';
+            };
+            btn.onmouseout = () => {
+                btn.style.backgroundColor = isSpecial ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.03)';
+                btn.style.color = 'var(--text-main)';
+                btn.style.borderColor = 'rgba(0, 0, 0, 0.08)';
+                btn.style.transform = 'none';
+            };
 
             btn.onclick = (e) => {
                 e.preventDefault();
@@ -162,10 +181,10 @@ export function openEditor(item, defaultName = '', currentScale = null) {
         // Add special buttons
         fastInsertContainer.appendChild(createBtn('|', '|', true));
         fastInsertContainer.appendChild(createBtn('-', '-', true));
-        fastInsertContainer.appendChild(createBtn('T', 'T', true));
-        fastInsertContainer.appendChild(createBtn('K', 'K', true));
-        fastInsertContainer.appendChild(createBtn('t', 't', true));
-        fastInsertContainer.appendChild(createBtn('k', 'k', true));
+        fastInsertContainer.appendChild(createBtn('T', 'T'));
+        fastInsertContainer.appendChild(createBtn('K', 'K'));
+        fastInsertContainer.appendChild(createBtn('t', 't'));
+        fastInsertContainer.appendChild(createBtn('k', 'k'));
     }
 }
 

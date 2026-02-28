@@ -35,6 +35,54 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     svg.innerHTML = '';
 
+    // Inject Metallic Gradient Defs for light mode
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    // Helper to create gradients
+    const createGradient = (id, stopsArr, cx = "50%", cy = "50%", fx = "35%", fy = "30%", r = "50%") => {
+        const grad = document.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
+        grad.setAttribute("id", id);
+        grad.setAttribute("cx", cx);
+        grad.setAttribute("cy", cy);
+        grad.setAttribute("r", r);
+        grad.setAttribute("fx", fx);
+        grad.setAttribute("fy", fy);
+        stopsArr.forEach(s => {
+            const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            stop.setAttribute("offset", s.offset);
+            stop.setAttribute("stop-color", s.color);
+            grad.appendChild(stop);
+        });
+        return grad;
+    };
+
+    defs.appendChild(createGradient("metallic-body-light", [
+        { offset: "0%", color: "#f8f9fa" },
+        { offset: "50%", color: "#e2e6ea" },
+        { offset: "90%", color: "#ced4da" },
+        { offset: "100%", color: "#adb5bd" }
+    ]));
+
+    defs.appendChild(createGradient("metallic-note-light", [
+        { offset: "0%", color: "#dee2e6" },
+        { offset: "70%", color: "#ced4da" },
+        { offset: "100%", color: "#adb5bd" }
+    ], "50%", "50%", "50%", "50%", "50%"));
+
+    defs.appendChild(createGradient("metallic-body-dark", [
+        { offset: "0%", color: "#495057" },
+        { offset: "50%", color: "#343a40" },
+        { offset: "90%", color: "#212529" },
+        { offset: "100%", color: "#111214" }
+    ]));
+
+    defs.appendChild(createGradient("metallic-note-dark", [
+        { offset: "0%", color: "#343a40" },
+        { offset: "70%", color: "#212529" },
+        { offset: "100%", color: "#111214" }
+    ], "50%", "50%", "50%", "50%", "50%"));
+
+    svg.appendChild(defs);
+
     // Main Body
     const body = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     body.setAttribute("cx", "200");
