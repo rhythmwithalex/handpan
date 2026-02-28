@@ -30,10 +30,24 @@ function sortNotesByPitchLocal(noteStrings) {
 }
 
 export function renderHandpanSVG(currentScale, mode = 'notes') {
-    const svg = document.getElementById('handpan-svg');
-    if (!svg) return;
+    const oldSvg = document.getElementById('handpan-svg');
+    if (!oldSvg) return;
 
-    svg.innerHTML = '';
+    // Remove old listeners to avoid duplicates on re-render by cloning
+    const svg = oldSvg.cloneNode(false);
+    oldSvg.parentNode.replaceChild(svg, oldSvg);
+
+    // Catch background taps for "Tak" (Body Hit)
+    const handleSvgTap = (e) => {
+        // Only trigger if we click directly on the svg or the percussion ring, not the notes 
+        // (notes have stopPropagation)
+        if (bodyClickCallback) {
+            bodyClickCallback();
+        }
+    };
+
+    svg.addEventListener('pointerdown', handleSvgTap);
+    svg.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 
     // Inject Metallic Gradient Defs for light mode
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
@@ -93,8 +107,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         // Prevent background Tak from firing when clicking inside the body
         e.stopPropagation();
     };
-    body.addEventListener('touchstart', cancelTak, { passive: false });
-    body.addEventListener('mousedown', cancelTak);
+    body.addEventListener('pointerdown', cancelTak, { passive: false });
+    body.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
     svg.appendChild(body);
 
     // Percussion Visualizer Ring (Dotted/Dashed, hidden by default)
@@ -277,6 +291,8 @@ function createNoteG(noteName, labelText, x, y, r, isDing = false, isBottom = fa
     g.addEventListener('pointerdown', triggerNote, { passive: false });
     // Keep touchstart to purely prevent default scaling/scrolling on older iOS if pointer events fail
     g.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+
+    return g;
 }
 
 export function highlightNote(noteName, delaySeconds = 0) {
