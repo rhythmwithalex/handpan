@@ -429,10 +429,13 @@ body {
     stroke: rgba(255, 255, 255, 0.2);
 }
 
-.hp-note:hover .note-area,
-.hp-note:hover .note-area-small {
-    fill: rgba(255, 255, 255, 0.5);
-    stroke: var(--accent-color);
+@media (hover: hover) {
+
+    .hp-note:hover .note-area,
+    .hp-note:hover .note-area-small {
+        fill: rgba(255, 255, 255, 0.5);
+        stroke: var(--accent-color);
+    }
 }
 
 .note-label,
