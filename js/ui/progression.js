@@ -81,7 +81,7 @@ export function exportProgressionData() {
     return data;
 }
 
-export function addChordToProgression(chord, specificNotes = null, label = null, rawText = null, defaultRepeats = 1) {
+export function addChordToProgression(chord, specificNotes = null, label = null, rawText = null, defaultRepeats = 1, isSimultaneous = false) {
     const item = document.createElement('div');
     item.className = 'progression-item glass-card-small';
     item.draggable = true;
@@ -130,7 +130,7 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
     }
 
     // Clone for dataset
-    const clonedNotes = actualNotes.map(evt => {
+    let clonedNotes = actualNotes.map(evt => {
         const clone = { ...evt, duration: evt.duration || 1 };
         if (evt.isGroup) {
             clone.notes = evt.notes.map(n => ({ ...n }));
@@ -138,14 +138,26 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
         return clone;
     });
 
+    if (isSimultaneous) {
+        clonedNotes = [{
+            isGroup: true,
+            duration: 1,
+            notes: clonedNotes.map(n => {
+                delete n.duration;
+                delete n.isGroup;
+                return n;
+            })
+        }];
+    }
+
     item.dataset.notes = JSON.stringify(clonedNotes);
-    item.dataset.sourceText = rawText || displayNotes.join(' ');
+    item.dataset.sourceText = rawText || (isSimultaneous ? displayNotes.join('|') : displayNotes.join(' '));
 
     let headerContentNotes = '';
 
-    // Prefer raw text display for Custom Phrases (when chord is null or explicit rawText is provided)
-    if (rawText && (!chord || chord.name === "Custom Chord" || chord.name === "Custom Arp" || chord.name === "Musical Phrase")) {
-        headerContentNotes = generateHTMLFromText(rawText);
+    // Prefer raw text display for simultaneous insertions or Custom Phrases
+    if (isSimultaneous || (rawText && (!chord || chord.name === "Custom Chord" || chord.name === "Custom Arp" || chord.name === "Musical Phrase"))) {
+        headerContentNotes = generateHTMLFromText(item.dataset.sourceText);
     } else {
         headerContentNotes = generateTruncatedNotesHTML(actualNotes);
     }

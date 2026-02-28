@@ -742,25 +742,28 @@ body {
 .premium-btn-small {
     background: var(--btn-bg);
     border: 1px solid var(--glass-border);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
+    border-radius: 8px;
     color: var(--text-main);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
-    font-size: 1.2rem;
-    line-height: 1;
-    padding: 0;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    padding: 6px 12px;
+}
+
+body:not(.dark-mode) .premium-btn-small {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.15);
 }
 
 .premium-btn-small:hover {
     background: var(--accent-color);
     color: #000;
     border-color: var(--accent-color);
-    transform: scale(1.1);
+    transform: translateY(-1px);
 }
 
 

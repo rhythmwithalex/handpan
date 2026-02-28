@@ -53,9 +53,10 @@ function initApp() {
     initVisualizer();
 
     initChordGrid({
-        addToProgression: (chord, specificNotes, label, rawText, defaultRepeats) => {
-            addChordToProgression(chord, specificNotes, label, rawText, defaultRepeats);
-            if (!document.getElementById('progression-panel').classList.contains('open')) {
+        addToProgression: (chord, specificNotes, label, rawText, defaultRepeats, isSimultaneous = false) => {
+            addChordToProgression(chord, specificNotes, label, rawText, defaultRepeats, isSimultaneous);
+            const panel = document.getElementById('progression-panel');
+            if (panel && !panel.classList.contains('open')) {
                 toggleProgressionPanel();
             }
             saveCurrentState();

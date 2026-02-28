@@ -150,24 +150,29 @@ export function renderChordGrid(chords, dingNotes) {
         const degreeHTML = degree ? `<span style="font-size:0.8em; color:rgba(255,255,255,0.5); font-weight:normal; margin-left:6px;">(${degree})</span>` : '';
 
         card.innerHTML = `
-            <div class="card-main">
-                <div class="card-info">
-                    <div class="card-title-row">
-                        <h2>${chord.root}${degreeHTML} <span style="font-weight:300; font-size: 0.9em; opacity: 0.9;">${chord.type}</span></h2>
-                    </div>
-                    <div class="card-notes-row">
+            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <!-- Row 1: Title -->
+                <div style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                    <h2 style="margin: 0; font-size: 1.2rem; color: var(--text-main);">${chord.root}${degreeHTML} <span style="font-weight:300; font-size: 0.9em; opacity: 0.9;">${chord.type}</span></h2>
+                </div>
+                <!-- Row 2: Notes & Options -->
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap; flex: 1;">
                         ${noteBadges}
                     </div>
+                    <button class="icon-btn open-options" title="View Options" style="font-size: 0.8rem; padding: 4px 8px; margin-left: 10px;">▼</button>
                 </div>
-                <div class="card-actions">
-                    <button class="icon-btn open-options" title="View Options">▼</button>
-                    <button class="icon-btn add-chord" title="Add to Progression">+</button>
+                <!-- Row 3: Add Buttons -->
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button class="premium-btn-small add-chord" title="Add Arpeggio" style="flex: 1; padding: 6px 0; font-size: 0.85rem;">Arpeggio +</button>
+                    <button class="premium-btn-small add-chord-sim" title="Add as Chord (Simultaneous)" style="flex: 1; padding: 6px 0; font-size: 0.85rem;">Chord |+</button>
                 </div>
             </div>
         `;
 
         // Interactions
         const openBtn = card.querySelector('.open-options');
+        const addSimBtn = card.querySelector('.add-chord-sim');
         const addBtn = card.querySelector('.add-chord');
 
         // Toggle Modal (via button)
@@ -177,11 +182,19 @@ export function renderChordGrid(chords, dingNotes) {
             openVoicingModal(chord, dingNotes);
         };
 
+        addSimBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (dependencies.addToProgression) {
+                dependencies.addToProgression(chord, null, null, null, 4, true); // true for isSimultaneous
+            }
+        };
+
         addBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
             if (dependencies.addToProgression) {
-                dependencies.addToProgression(chord);
+                dependencies.addToProgression(chord, null, null, null, 4, false); // default sequential
             }
         };
 
@@ -227,13 +240,16 @@ function openVoicingModal(chord, dingNotes) {
         }).join('');
 
         row.innerHTML = `
-            <div class="voicing-info">
-                <span class="voicing-label">${label}</span>
-                <div class="voicing-notes-container">${notePills}</div>
+            <div class="voicing-info" style="flex: 1;">
+                <span class="voicing-label" style="font-weight: bold; margin-bottom: 4px; display: block;">${label}</span>
+                <div class="voicing-notes-container" style="margin-bottom: 8px;">${notePills}</div>
             </div>
-            <div class="voicing-actions">
-                <button class="icon-btn add-variant-btn" title="Add this variant">+</button>
-                <button class="premium-btn play-btn" style="padding: 5px 15px; font-size: 0.9rem;">Play ▶</button>
+            <div class="voicing-actions" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                    <button class="premium-btn-small add-variant-btn" title="Add Arpeggio" style="padding: 4px 8px; font-size: 0.8rem;">Arpeggio +</button>
+                    <button class="premium-btn-small add-variant-sim-btn" title="Add as Chord (Simultaneous)" style="padding: 4px 8px; font-size: 0.8rem;">Chord |+</button>
+                </div>
+                <button class="premium-btn play-btn" style="padding: 6px 15px; font-size: 0.85rem; width: 100%;">Play ▶</button>
             </div>
         `;
 
@@ -246,13 +262,23 @@ function openVoicingModal(chord, dingNotes) {
             startModalLoop(notes, pillsDiv, playBtn);
         };
 
+        const addSimBtn = row.querySelector('.add-variant-sim-btn');
+        addSimBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (dependencies.addToProgression) {
+                const chordLabel = voicingIndex >= 0 ? `${chord.name} (V${voicingIndex + 1})` : chord.name;
+                dependencies.addToProgression(chord, notes, chordLabel, null, 4, true); // true for isSimultaneous
+            }
+            closeVoicingModal();
+        };
+
         const addBtn = row.querySelector('.add-variant-btn');
         addBtn.onclick = (e) => {
             e.stopPropagation();
             if (dependencies.addToProgression) {
                 // Determine label if it's a specific voicing
                 const chordLabel = voicingIndex >= 0 ? `${chord.name} (V${voicingIndex + 1})` : chord.name;
-                dependencies.addToProgression(chord, notes, chordLabel, null, 4);
+                dependencies.addToProgression(chord, notes, chordLabel, null, 4, false);
             }
             closeVoicingModal();
         };
