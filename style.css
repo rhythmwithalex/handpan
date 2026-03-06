@@ -673,6 +673,8 @@ body {
     padding: 0;
     line-height: 1;
     flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .icon-btn:hover {

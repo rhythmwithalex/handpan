@@ -410,20 +410,23 @@
                 <!-- Zoom Controls -->
                 <div
                     style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.4); padding: 4px; border-radius: 6px;">
-                    <span style="font-size: 0.75rem; font-weight: bold; opacity: 0.7; padding: 0 4px;">ZOOM</span>
+                    <span
+                        style="font-size: 0.75rem; font-weight: bold; opacity: 0.7; padding: 0 4px; user-select: none; -webkit-user-select: none;">ZOOM</span>
                     <div style="display: flex; align-items: center; gap: 2px;">
-                        <span style="font-size: 0.7rem; opacity: 0.6;">H:</span>
-                        <button id="grid-zoom-h-out" class="icon-btn"
-                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">-</button>
+                        <span
+                            style="font-size: 0.7rem; opacity: 0.6; user-select: none; -webkit-user-select: none;">H:</span>
                         <button id="grid-zoom-h-in" class="icon-btn"
-                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">+</button>
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem; user-select: none; -webkit-user-select: none;">+</button>
+                        <button id="grid-zoom-h-out" class="icon-btn"
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem; user-select: none; -webkit-user-select: none;">-</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 2px;">
-                        <span style="font-size: 0.7rem; opacity: 0.6; margin-left: 4px;">V:</span>
-                        <button id="grid-zoom-v-out" class="icon-btn"
-                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">-</button>
+                        <span
+                            style="font-size: 0.7rem; opacity: 0.6; margin-left: 4px; user-select: none; -webkit-user-select: none;">V:</span>
                         <button id="grid-zoom-v-in" class="icon-btn"
-                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">+</button>
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem; user-select: none; -webkit-user-select: none;">+</button>
+                        <button id="grid-zoom-v-out" class="icon-btn"
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem; user-select: none; -webkit-user-select: none;">-</button>
                     </div>
                 </div>
 
@@ -446,7 +449,13 @@
                     <!-- Empty corner over labels -->
                     <div style="width: 50px; flex-shrink: 0; border-right: 1px solid rgba(0,0,0,0.1);"></div>
                     <!-- Scrollable numbers track, synced with canvas scroll -->
-                    <div id="grid-numbers-scroll-area" style="flex: 1; overflow: hidden; position: relative;">
+                    <div id="grid-numbers-scroll-area"
+                        style="flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; scrollbar-width: none; -ms-overflow-style: none;">
+                        <style>
+                            #grid-numbers-scroll-area::-webkit-scrollbar {
+                                display: none;
+                            }
+                        </style>
                         <div id="grid-numbers-track"
                             style="position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center;">
                         </div>
@@ -454,9 +463,14 @@
                 </div>
 
                 <div style="flex: 1; display: flex; position: relative; overflow: hidden;">
-                    <!-- Fixed Y-axis labels (vertical scroll hidden but synced via JS) -->
+                    <!-- Y-axis labels (touch scrollable to sync with canvas) -->
                     <div id="grid-labels-wrapper"
-                        style="width: 50px; flex-shrink: 0; background: rgba(0,0,0,0.05); border-right: 1px solid rgba(0,0,0,0.1); overflow: hidden; position: relative;">
+                        style="width: 50px; flex-shrink: 0; background: rgba(0,0,0,0.05); border-right: 1px solid rgba(0,0,0,0.1); overflow-y: auto; overflow-x: hidden; position: relative; scrollbar-width: none; -ms-overflow-style: none;">
+                        <style>
+                            #grid-labels-wrapper::-webkit-scrollbar {
+                                display: none;
+                            }
+                        </style>
                         <div id="grid-labels-container" style="position: absolute; top: 0; left: 0; width: 100%;">
                             <!-- JS populates labels here -->
                         </div>

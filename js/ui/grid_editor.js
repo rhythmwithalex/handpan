@@ -192,12 +192,35 @@ export function initGridEditor(deps) {
     const numbersScrollArea = document.getElementById('grid-numbers-scroll-area');
     const canvas = document.getElementById('grid-canvas');
     if (scrollArea && labelsWrapper) {
+        let isSyncingLeft = false;
+        let isSyncingRight = false;
+
         scrollArea.addEventListener('scroll', () => {
-            // Sync vertical scroll to labels
-            labelsWrapper.scrollTop = scrollArea.scrollTop;
-            // Sync horizontal scroll to numbers track
-            if (numbersScrollArea) numbersScrollArea.scrollLeft = scrollArea.scrollLeft;
+            if (!isSyncingLeft) {
+                isSyncingRight = true;
+                labelsWrapper.scrollTop = scrollArea.scrollTop;
+                if (numbersScrollArea) numbersScrollArea.scrollLeft = scrollArea.scrollLeft;
+                setTimeout(() => isSyncingRight = false, 10);
+            }
         });
+
+        labelsWrapper.addEventListener('scroll', () => {
+            if (!isSyncingRight) {
+                isSyncingLeft = true;
+                scrollArea.scrollTop = labelsWrapper.scrollTop;
+                setTimeout(() => isSyncingLeft = false, 10);
+            }
+        });
+
+        if (numbersScrollArea) {
+            numbersScrollArea.addEventListener('scroll', () => {
+                if (!isSyncingRight) {
+                    isSyncingLeft = true;
+                    scrollArea.scrollLeft = numbersScrollArea.scrollLeft;
+                    setTimeout(() => isSyncingLeft = false, 10);
+                }
+            });
+        }
     }
 
     if (canvas) {
@@ -324,6 +347,18 @@ export function openGridEditor(phraseString = null, itemId = null) {
 
     updateLengthDisplay();
     document.getElementById('grid-editor-modal').style.display = 'flex';
+
+    // Calculate optimal zoom to fit all notes vertically now that modal is visible
+    const scrollContainer = document.getElementById('grid-scroll-area');
+    const containerHeight = scrollContainer ? (scrollContainer.clientHeight || 300) : 300;
+    // Leave some padding for bottom shadow lines
+    const optimalHeight = Math.floor((containerHeight - 15) / scaleNotesSorted.length);
+    // Min 22px so it's readable on phone, Max 45px so it doesn't look too bulky on iPad
+    CELL_HEIGHT = Math.max(22, Math.min(45, optimalHeight));
+
+    // Reset horizontal zoom
+    BASE_COL_WIDTH = DEFAULT_BASE_COL_WIDTH;
+
     renderCanvas();
 }
 
@@ -708,6 +743,13 @@ function shiftDown() {
 // Playback Scheduler
 function togglePlay() {
     const btn = document.getElementById('grid-play-btn');
+
+    // Explicitly resume audio context inside user gesture for iOS/iPadOS compatibility
+    const audioCtx = getAudioContext();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
     isPlaying = !isPlaying;
     if (isPlaying) {
         if (btn) btn.textContent = 'Stop ⏹';
