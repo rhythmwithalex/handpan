@@ -338,14 +338,22 @@
     <div id="grid-editor-modal" class="modal-overlay" style="display: none; z-index: 2050;">
         <div class="modal-content glass-card"
             style="max-width: 650px; padding: 25px; display: flex; flex-direction: column; max-height: 90vh;">
-            <div class="modal-header" style="margin-bottom: 15px;">
+            <div id="grid-editor-header" class="modal-header" style="margin-bottom: 15px;">
                 <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0;">Grid Editor (Beta)
                 </h2>
                 <button id="close-grid-editor-modal" class="close-btn" style="top: -5px; right: 0;">&times;</button>
             </div>
 
+            <!-- GH Fullscreen Stop Overlay -->
+            <div id="grid-gh-stop-overlay" style="display: none; justify-content: flex-end; margin-bottom: 15px;">
+                <button id="grid-gh-stop-btn" class="premium-btn"
+                    style="background: #e74c3c; color: white; border-color: #e74c3c; padding: 10px 30px; font-size: 1.1rem; border-radius: 8px; font-weight: bold;">
+                    Stop ⏹
+                </button>
+            </div>
+
             <!-- Toolbar Row 1: Length, BPM, and Div -->
-            <div
+            <div id="grid-toolbar-1"
                 style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px;">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1;">
                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -385,6 +393,8 @@
 
                 <!-- Play/Clear stays Top Right -->
                 <div style="display: flex; gap: 8px; flex-shrink: 0; margin-left: auto;">
+                    <button id="grid-gh-btn" class="icon-btn" title="Guitar Hero Mode"
+                        style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 1.1rem; transition: all 0.2s;">🎸</button>
                     <button id="grid-play-btn" class="premium-btn-small"
                         style="padding: 4px 12px; font-size: 0.85rem; background: #2ed573; color: white; border-color: #2ed573; white-space: nowrap;">Play
                         ▶</button>
@@ -394,7 +404,7 @@
             </div>
 
             <!-- Toolbar Row 2: Edit Tools, Zoom, Undo/Redo -->
-            <div
+            <div id="grid-toolbar-2"
                 style="display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 10px; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 8px; gap: 10px;">
                 <!-- Tools -->
                 <div
@@ -405,6 +415,10 @@
                         style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 1.1rem;">⬚</button>
                     <button id="grid-mode-move" class="icon-btn" title="Move Mode"
                         style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 1.1rem;">✥</button>
+
+                    <!-- Contextual Delete -->
+                    <button id="grid-mode-delete" class="icon-btn" title="Delete Selected"
+                        style="display: none; background: rgba(231, 76, 60, 0.2); border: 1px solid #e74c3c; border-radius: 4px; padding: 4px 10px; font-size: 1.1rem; color: #e74c3c; margin-left: 4px; transition: all 0.2s;">🗑</button>
                 </div>
 
                 <!-- Zoom Controls -->
@@ -444,7 +458,7 @@
                 style="flex: 1; display: flex; flex-direction: column; background: #e9ecef; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); overflow: hidden; min-height: 250px;">
 
                 <!-- Numbering Track (Sticky Header) -->
-                <div
+                <div id="grid-numbers-header"
                     style="display: flex; position: relative; overflow: hidden; background: rgba(0,0,0,0.08); border-bottom: 1px solid rgba(0,0,0,0.1); height: 24px; flex-shrink: 0;">
                     <!-- Empty corner over labels -->
                     <div style="width: 50px; flex-shrink: 0; border-right: 1px solid rgba(0,0,0,0.1);"></div>
@@ -483,7 +497,7 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <div id="grid-editor-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 <button id="grid-cancel-btn" class="secondary-btn"
                     style="border-radius: 20px; padding: 8px 16px;">Cancel</button>
                 <button id="grid-export-btn" class="premium-btn" style="border-radius: 20px; padding: 8px 20px;">Export

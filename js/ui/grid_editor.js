@@ -20,6 +20,8 @@ let redoStack = [];
 
 let currentMode = 'draw'; // 'draw', 'select', 'move'
 let selectedNotes = []; // Array of note index numbers
+let marqueeBox = null; // { startX, startY, currentX, currentY }
+let isGuitarHeroMode = false;
 
 let editingItem = null; // Store reference to Progression Item being edited
 
@@ -48,6 +50,7 @@ export function initGridEditor(deps) {
     const modeDrawBtn = document.getElementById('grid-mode-draw');
     const modeSelectBtn = document.getElementById('grid-mode-select');
     const modeMoveBtn = document.getElementById('grid-mode-move');
+    const modeDeleteBtn = document.getElementById('grid-mode-delete');
 
     // Sizing & Res
     const minusBtn = document.getElementById('grid-length-minus');
@@ -55,8 +58,10 @@ export function initGridEditor(deps) {
     const x2Btn = document.getElementById('grid-length-x2');
     const resSelect = document.getElementById('grid-resolution-select');
 
-    // Play
+    // Play & GH
     const playBtn = document.getElementById('grid-play-btn');
+    const ghBtn = document.getElementById('grid-gh-btn');
+    const ghStopBtn = document.getElementById('grid-gh-stop-btn');
 
     // Zoom
     const zoomHIn = document.getElementById('grid-zoom-h-in');
@@ -107,8 +112,28 @@ export function initGridEditor(deps) {
     };
 
     if (modeDrawBtn) modeDrawBtn.addEventListener('click', () => { currentMode = 'draw'; selectedNotes = []; renderCanvas(); updateModeUI(); });
-    if (modeSelectBtn) modeSelectBtn.addEventListener('click', () => { currentMode = 'select'; updateModeUI(); });
-    if (modeMoveBtn) modeMoveBtn.addEventListener('click', () => { currentMode = 'move'; updateModeUI(); });
+    if (modeSelectBtn) modeSelectBtn.addEventListener('click', () => { currentMode = 'select'; updateModeUI(); renderCanvas(); });
+    if (modeMoveBtn) modeMoveBtn.addEventListener('click', () => { currentMode = 'move'; updateModeUI(); renderCanvas(); });
+
+    if (modeDeleteBtn) {
+        modeDeleteBtn.addEventListener('click', () => {
+            if (selectedNotes.length === 0) return;
+            saveHistoryState();
+            // Sort indices descending to avoid shifting issues when splicing
+            selectedNotes.sort((a, b) => b - a).forEach(idx => {
+                notes.splice(idx, 1);
+            });
+            selectedNotes = [];
+
+            // Switch to draw mode if no notes remain
+            if (notes.length === 0) {
+                currentMode = 'draw';
+                updateModeUI();
+            }
+
+            renderCanvas();
+        });
+    }
 
     if (minusBtn) {
         minusBtn.addEventListener('click', () => {
@@ -184,7 +209,36 @@ export function initGridEditor(deps) {
         });
     }
 
+    if (ghBtn) {
+        ghBtn.addEventListener('click', () => {
+            isGuitarHeroMode = !isGuitarHeroMode;
+            ghBtn.style.background = isGuitarHeroMode ? 'rgba(243, 156, 18, 0.2)' : 'rgba(255,255,255,0.1)';
+            ghBtn.style.border = isGuitarHeroMode ? '1px solid #f39c12' : '';
+            if (isPlaying) {
+                if (!isGuitarHeroMode) {
+                    const container = document.getElementById('grid-labels-container');
+                    if (container) container.style.display = 'block';
+
+                    // Restore UI
+                    document.getElementById('grid-editor-header').style.display = 'flex';
+                    document.getElementById('grid-toolbar-1').style.display = 'flex';
+                    document.getElementById('grid-toolbar-2').style.display = 'flex';
+                    document.getElementById('grid-gh-stop-overlay').style.display = 'none';
+
+                    renderCanvas();
+                } else {
+                    // Hide UI for fullscreen
+                    document.getElementById('grid-editor-header').style.display = 'none';
+                    document.getElementById('grid-toolbar-1').style.display = 'none';
+                    document.getElementById('grid-toolbar-2').style.display = 'none';
+                    document.getElementById('grid-gh-stop-overlay').style.display = 'flex';
+                }
+            }
+        });
+    }
+
     if (playBtn) playBtn.addEventListener('click', togglePlay);
+    if (ghStopBtn) ghStopBtn.addEventListener('click', togglePlay);
 
     // Canvas interaction
     const scrollArea = document.getElementById('grid-scroll-area');
@@ -389,9 +443,19 @@ function duplicateGrid() {
 }
 
 // Canvas Rendering
-function renderCanvas() {
+function renderCanvas(currentTick) {
     const canvas = document.getElementById('grid-canvas');
     const container = document.getElementById('grid-labels-container');
+    const modeDeleteBtn = document.getElementById('grid-mode-delete');
+
+    if (modeDeleteBtn) {
+        if (currentMode === 'select' && selectedNotes.length > 0) {
+            modeDeleteBtn.style.display = 'flex';
+        } else {
+            modeDeleteBtn.style.display = 'none';
+        }
+    }
+
     if (!canvas || !container) return;
 
     const ctx = canvas.getContext('2d');
@@ -493,17 +557,27 @@ function renderCanvas() {
 
         const isSelected = selectedNotes.includes(index);
 
+        let isPlayingNow = false;
+        if (typeof currentTick !== 'undefined' && currentTick >= note.startTick && currentTick < note.startTick + note.lengthTicks) {
+            isPlayingNow = true;
+        }
+
         // 3D Voluminous styling
         const grad = ctx.createLinearGradient(x, y, x, y + h);
-        grad.addColorStop(0, '#2ecc71'); // Lighter vivid green top
-        grad.addColorStop(1, '#229954'); // Darker solid green bottom
+        if (isPlayingNow) {
+            grad.addColorStop(0, '#f1c40f'); // bright yellow
+            grad.addColorStop(1, '#f39c12'); // orange-ish yellow
+        } else {
+            grad.addColorStop(0, '#2ecc71'); // Lighter vivid green top
+            grad.addColorStop(1, '#229954'); // Darker solid green bottom
+        }
 
         ctx.fillStyle = grad;
 
         // Shadow for depth
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 2;
+        ctx.shadowColor = isPlayingNow ? '#f1c40f' : 'rgba(0,0,0,0.3)';
+        ctx.shadowBlur = isPlayingNow ? 15 : 4;
+        ctx.shadowOffsetY = isPlayingNow ? 0 : 2;
         ctx.shadowOffsetX = 0;
 
         // Draw rounded rectangle
@@ -517,7 +591,7 @@ function renderCanvas() {
 
         // Optional: 1px subtle stroke for shine inside (top edge)
         if (ctx.roundRect) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.strokeStyle = isPlayingNow ? '#fff' : 'rgba(255,255,255,0.4)';
             ctx.lineWidth = 1;
             ctx.shadowColor = 'transparent'; // Remove shadow before stroke
             ctx.beginPath();
@@ -551,6 +625,26 @@ function renderCanvas() {
             ctx.fillText(displayLabel, x + (w / 2), y + (h / 2));
         }
     });
+
+    // Draw Marquee Box
+    if (marqueeBox) {
+        ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+        ctx.strokeStyle = '#3498db';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+
+        const mx = Math.min(marqueeBox.startX, marqueeBox.currentX);
+        const my = Math.min(marqueeBox.startY, marqueeBox.currentY);
+        const mw = Math.abs(marqueeBox.startX - marqueeBox.currentX);
+        const mh = Math.abs(marqueeBox.startY - marqueeBox.currentY);
+
+        ctx.beginPath();
+        ctx.rect(mx, my, mw, mh);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.setLineDash([]); // Reset line dash for other drawings
+    }
 }
 
 function setupCanvasInteractions(canvas) {
@@ -560,9 +654,14 @@ function setupCanvasInteractions(canvas) {
     let dragStartCell = null;
     let initialSelectedStates = [];
 
+    // Touch panning state
+    let activePointers = new Map();
+    let initialPanScrollLeft = 0;
+    let initialPanScrollTop = 0;
+    let initialPanCenter = null;
+
     const getCellFromEvent = (e) => {
         const rect = canvas.getBoundingClientRect();
-        // Handle scroll and zoom
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
 
@@ -571,16 +670,34 @@ function setupCanvasInteractions(canvas) {
 
         const row = Math.floor(y / CELL_HEIGHT);
         const col = Math.floor(x / BASE_COL_WIDTH);
-        return { row, col };
+        return { row, col, x, y };
     };
 
-    canvas.addEventListener('pointerdown', (e) => {
-        if (isPlaying) togglePlay(); // Custom UX: stop playback on edit
+    const handlePointerDown = (e) => {
+        activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 
-        // Ensure the canvas captures the pointer so dragging outside doesn't lose the event
+        if (isPlaying) togglePlay();
+
         canvas.setPointerCapture(e.pointerId);
 
-        const { row, col } = getCellFromEvent(e);
+        // Handle 2-finger panning
+        if (activePointers.size >= 2) {
+            isDragging = false;
+            marqueeBox = null;
+            const scrollArea = document.getElementById('grid-scroll-area');
+            if (scrollArea) {
+                initialPanScrollLeft = scrollArea.scrollLeft;
+                initialPanScrollTop = scrollArea.scrollTop;
+
+                let sumX = 0, sumY = 0;
+                activePointers.forEach(p => { sumX += p.clientX; sumY += p.clientY; });
+                initialPanCenter = { x: sumX / activePointers.size, y: sumY / activePointers.size };
+            }
+            renderCanvas();
+            return;
+        }
+
+        const { row, col, x, y } = getCellFromEvent(e);
         const maxCols = numBeats * currentResolution;
         if (row < 0 || row >= scaleNotesSorted.length || col < 0 || col >= maxCols) return;
 
@@ -597,7 +714,9 @@ function setupCanvasInteractions(canvas) {
                     selectedNotes.push(existingIdx);
                 }
             } else {
-                selectedNotes = []; // Clicked empty space clears selection
+                selectedNotes = [];
+                marqueeBox = { startX: x, startY: y, currentX: x, currentY: y };
+                isDragging = true;
             }
             renderCanvas();
             return;
@@ -608,7 +727,6 @@ function setupCanvasInteractions(canvas) {
             saveHistoryState();
             isDragging = true;
             dragStartCell = { row, col };
-            // Store original positions of selected notes
             initialSelectedStates = selectedNotes.map(idx => ({ ...notes[idx] }));
             return;
         }
@@ -630,12 +748,59 @@ function setupCanvasInteractions(canvas) {
         isDragging = true;
         lastHandledCell = `${row},${col}`;
         renderCanvas();
-    });
+    };
 
-    canvas.addEventListener('pointermove', (e) => {
+    canvas.addEventListener('pointerdown', handlePointerDown);
+
+    const handlePointerMove = (e) => {
+        if (activePointers.has(e.pointerId)) {
+            activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+        }
+
+        // Handle 2-finger panning
+        if (activePointers.size >= 2) {
+            let sumX = 0, sumY = 0;
+            activePointers.forEach(p => { sumX += p.clientX; sumY += p.clientY; });
+            const currentCenter = { x: sumX / activePointers.size, y: sumY / activePointers.size };
+
+            const dx = currentCenter.x - initialPanCenter.x;
+            const dy = currentCenter.y - initialPanCenter.y;
+
+            const scrollArea = document.getElementById('grid-scroll-area');
+            if (scrollArea) {
+                scrollArea.scrollLeft = initialPanScrollLeft - dx;
+                scrollArea.scrollTop = initialPanScrollTop - dy;
+            }
+            return;
+        }
+
         if (!isDragging) return;
-        const { row, col } = getCellFromEvent(e);
+        const { row, col, x, y } = getCellFromEvent(e);
         const maxCols = numBeats * currentResolution;
+
+        if (currentMode === 'select' && marqueeBox) {
+            marqueeBox.currentX = x;
+            marqueeBox.currentY = y;
+
+            const minX = Math.min(marqueeBox.startX, marqueeBox.currentX);
+            const maxX = Math.max(marqueeBox.startX, marqueeBox.currentX);
+            const minY = Math.min(marqueeBox.startY, marqueeBox.currentY);
+            const maxY = Math.max(marqueeBox.startY, marqueeBox.currentY);
+
+            selectedNotes = [];
+            notes.forEach((note, idx) => {
+                const noteX = (note.startTick / TICKS_PER_BEAT) * BASE_COL_WIDTH * currentResolution;
+                const noteW = (note.lengthTicks / TICKS_PER_BEAT) * BASE_COL_WIDTH * currentResolution;
+                const noteY = note.row * CELL_HEIGHT;
+                const noteH = CELL_HEIGHT;
+
+                if (noteX < maxX && noteX + noteW > minX && noteY < maxY && noteY + noteH > minY) {
+                    selectedNotes.push(idx);
+                }
+            });
+            renderCanvas();
+            return;
+        }
 
         if (currentMode === 'move') {
             const cellId = `${row},${col}`;
@@ -699,15 +864,46 @@ function setupCanvasInteractions(canvas) {
         }
 
         renderCanvas();
-    });
-
-    const endDrag = (e) => {
-        isDragging = false;
-        canvas.releasePointerCapture(e.pointerId);
     };
 
-    canvas.addEventListener('pointerup', endDrag);
-    canvas.addEventListener('pointercancel', endDrag);
+    canvas.addEventListener('pointermove', handlePointerMove);
+
+    const handlePointerUpOrCancel = (e) => {
+        activePointers.delete(e.pointerId);
+
+        if (activePointers.size === 0) {
+            isDragging = false;
+            dragAction = null;
+            lastHandledCell = null;
+            dragStartCell = null;
+            initialSelectedStates = [];
+            initialPanCenter = null;
+            marqueeBox = null;
+            renderCanvas();
+        } else if (activePointers.size >= 1) {
+            // Update pan center when finger is lifted to prevent jumping
+            let sumX = 0, sumY = 0;
+            activePointers.forEach(p => { sumX += p.clientX; sumY += p.clientY; });
+            initialPanCenter = { x: sumX / activePointers.size, y: sumY / activePointers.size };
+            const scrollArea = document.getElementById('grid-scroll-area');
+            if (scrollArea) {
+                initialPanScrollLeft = scrollArea.scrollLeft;
+                initialPanScrollTop = scrollArea.scrollTop;
+            }
+        }
+    };
+
+    canvas.addEventListener('pointerup', handlePointerUpOrCancel);
+    canvas.addEventListener('pointercancel', handlePointerUpOrCancel);
+    canvas.addEventListener('pointerout', (e) => {
+        // Only if it's the primary pointer or native out
+        if (e.pointerId && activePointers.has(e.pointerId)) {
+            handlePointerUpOrCancel(e);
+        }
+    });
+
+    // Custom Context Menu (prevent native menu on long press)
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 // Shifting
@@ -753,7 +949,57 @@ function togglePlay() {
     isPlaying = !isPlaying;
     if (isPlaying) {
         if (btn) btn.textContent = 'Stop ⏹';
-        startPlayback();
+        if (isGuitarHeroMode) {
+            document.getElementById('grid-editor-header').style.display = 'none';
+            document.getElementById('grid-toolbar-1').style.display = 'none';
+            document.getElementById('grid-toolbar-2').style.display = 'none';
+            document.getElementById('grid-editor-footer').style.display = 'none';
+            document.getElementById('grid-numbers-header').style.display = 'none';
+            document.getElementById('grid-gh-stop-overlay').style.display = 'flex';
+
+            const overlay = document.getElementById('grid-editor-modal');
+            if (overlay) {
+                overlay.dataset.origPadding = overlay.style.padding;
+                overlay.style.setProperty('padding', '0px', 'important');
+            }
+
+            // Expand modal to true absolute fullscreen
+            const modal = document.querySelector('#grid-editor-modal .modal-content');
+            if (modal) {
+                modal.dataset.origCssText = modal.style.cssText;
+
+                modal.style.setProperty('max-width', '100vw', 'important');
+                modal.style.setProperty('max-height', '100vh', 'important');
+                modal.style.setProperty('height', '100vh', 'important');
+                modal.style.setProperty('width', '100vw', 'important');
+                modal.style.setProperty('margin', '0px', 'important');
+                // The user asked to restore a small margin above the Stop button.
+                // If we set padding: 10px, it works, but let's do padding-top: 20px so the Stop button isn't right on the edge
+                modal.style.setProperty('padding', '20px 0 0 0', 'important');
+                modal.style.setProperty('border-radius', '0px', 'important');
+                modal.style.setProperty('border', 'none', 'important');
+            }
+
+            // Override modal-body's 60vh max-height from style.css
+            const modalBody = document.querySelector('#grid-editor-modal .modal-body');
+            if (modalBody) {
+                modalBody.dataset.origMaxHeight = modalBody.style.maxHeight;
+                modalBody.dataset.origBorderRadius = modalBody.style.borderRadius;
+                modalBody.dataset.origBorder = modalBody.style.border;
+
+                modalBody.style.setProperty('max-height', 'none', 'important');
+                modalBody.style.setProperty('border-radius', '0px', 'important');
+                modalBody.style.setProperty('border', 'none', 'important');
+            }
+
+            // Move Stop button wrapper margin if needed
+            const stopOverlay = document.getElementById('grid-gh-stop-overlay');
+            if (stopOverlay) {
+                stopOverlay.dataset.origMargin = stopOverlay.style.margin;
+                stopOverlay.style.setProperty('margin', '0 20px 10px 0', 'important');
+            }
+        }
+        startPlayback(true);
     } else {
         if (btn) btn.textContent = 'Play ▶';
         cancelAnimationFrame(animationFrameId);
@@ -761,11 +1007,47 @@ function togglePlay() {
         playbackTimeoutId = null;
         animationFrameId = null;
         stopAllSounds();
-        renderCanvas(); // Redraw without playhead
+
+        document.getElementById('grid-editor-header').style.display = 'flex';
+        document.getElementById('grid-toolbar-1').style.display = 'flex';
+        document.getElementById('grid-toolbar-2').style.display = 'flex';
+        document.getElementById('grid-editor-footer').style.display = 'flex';
+        document.getElementById('grid-numbers-header').style.display = 'flex';
+        document.getElementById('grid-gh-stop-overlay').style.display = 'none';
+
+        if (isGuitarHeroMode) {
+            const overlay = document.getElementById('grid-editor-modal');
+            if (overlay) {
+                overlay.style.padding = overlay.dataset.origPadding || '';
+            }
+
+            // Restore modal
+            const modal = document.querySelector('#grid-editor-modal .modal-content');
+            if (modal) {
+                modal.style.cssText = modal.dataset.origCssText || '';
+            }
+
+            const modalBody = document.querySelector('#grid-editor-modal .modal-body');
+            if (modalBody) {
+                modalBody.style.maxHeight = modalBody.dataset.origMaxHeight || '';
+                modalBody.style.borderRadius = modalBody.dataset.origBorderRadius || '8px';
+                modalBody.style.border = modalBody.dataset.origBorder || '1px solid rgba(0,0,0,0.1)';
+            }
+
+            const stopOverlay = document.getElementById('grid-gh-stop-overlay');
+            if (stopOverlay) {
+                stopOverlay.style.margin = stopOverlay.dataset.origMargin || '';
+            }
+        }
+
+        const container = document.getElementById('grid-labels-container');
+        if (container) container.style.display = 'block';
+
+        renderCanvas(); // Redraw static grid without playhead
     }
 }
 
-function startPlayback() {
+function startPlayback(isFirstLoop = true) {
     const audioCtx = getAudioContext();
     if (!audioCtx) return;
 
@@ -774,8 +1056,13 @@ function startPlayback() {
     // Match progression stage default (1 step = 8th note)
     const ticksPerSecond = (bpm / 60) * TICKS_PER_BEAT * 2;
 
+    // GH lead-in delay 
+    const isGH = typeof isGuitarHeroMode !== 'undefined' && isGuitarHeroMode;
+    const leadInSec = (isGH && isFirstLoop) ? 2.0 : 0;
+
     // playStartTime is updated every loop iteration
-    playStartTime = audioCtx.currentTime;
+    // If GH mode and first loop, we set the logical start time 2 seconds in the future
+    playStartTime = audioCtx.currentTime + leadInSec;
 
     // Clear old animation frame and timeouts so we don't spawn multiple
     if (animationFrameId) {
@@ -804,11 +1091,12 @@ function startPlayback() {
 
     // Schedule the next loop iteration exactly at the end of this bounds
     const totalBeatsDurationSec = (numBeats * TICKS_PER_BEAT) / ticksPerSecond;
+    // We add leadInSec here so the visual loop and audio loop wait for the 2s preamble if it's the first loop
     playbackTimeoutId = setTimeout(() => {
         if (isPlaying) {
-            startPlayback(); // Trigger the next loop
+            startPlayback(false); // Trigger the next loop without lead-in
         }
-    }, totalBeatsDurationSec * 1000);
+    }, (leadInSec + totalBeatsDurationSec) * 1000);
 
     // Initial draw playhead is decoupled from audio scheduling directly now
     if (!animationFrameId) {
@@ -827,15 +1115,24 @@ function drawPlayhead() {
     const ticksPerSecond = (bpm / 60) * TICKS_PER_BEAT * 2;
 
     const elapsedSec = audioCtx.currentTime - playStartTime;
+    // elapsedTicks can be negative during lead-in
     const elapsedTicks = elapsedSec * ticksPerSecond;
 
     const maxTicks = numBeats * TICKS_PER_BEAT;
 
-    // We loop the playhead visually by modulating the elapsed ticks by maxTicks
-    // So it snaps back to 0 when it hits the end.
-    const currentTickWrap = elapsedTicks % maxTicks;
+    // If GH mode, we don't wrap the playhead if it's still in the negative lead-in phase
+    let currentTickWrap = elapsedTicks;
+    if (elapsedTicks >= 0) {
+        currentTickWrap = elapsedTicks % maxTicks;
+    }
 
-    renderCanvas(); // Redraw grid
+    if (isGuitarHeroMode) {
+        drawGuitarHeroMode(currentTickWrap, maxTicks);
+        animationFrameId = requestAnimationFrame(drawPlayhead);
+        return;
+    }
+
+    renderCanvas(currentTickWrap); // Redraw grid with active tick
 
     // Draw playhead over it
     const canvas = document.getElementById('grid-canvas');
@@ -864,6 +1161,128 @@ function drawPlayhead() {
     }
 
     animationFrameId = requestAnimationFrame(drawPlayhead);
+}
+
+function drawGuitarHeroMode(currentTickWrap, maxTicks) {
+    const canvas = document.getElementById('grid-canvas');
+    const ctx = canvas.getContext('2d');
+    const scrollArea = document.getElementById('grid-scroll-area');
+
+    if (canvas.width !== scrollArea.clientWidth || canvas.height !== scrollArea.clientHeight) {
+        canvas.width = scrollArea.clientWidth;
+        canvas.height = scrollArea.clientHeight;
+        scrollArea.scrollLeft = 0;
+        scrollArea.scrollTop = 0;
+
+        const container = document.getElementById('grid-labels-container');
+        if (container) container.style.display = 'none';
+    }
+
+    ctx.fillStyle = '#1e272e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const hitLineY = canvas.height - 60;
+
+    // Hit line
+    ctx.strokeStyle = '#f39c12';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, hitLineY);
+    ctx.lineTo(canvas.width, hitLineY);
+    ctx.stroke();
+
+    const numLanes = scaleNotesSorted.length;
+    const maxLaneWidth = 60;
+    const laneWidth = Math.min(maxLaneWidth, canvas.width / numLanes);
+    const lanesStartX = (canvas.width - (numLanes * laneWidth)) / 2;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+
+    // Dynamic font size
+    let fontSize = 12;
+    if (laneWidth > 25) fontSize = 14;
+    if (laneWidth > 35) fontSize = 18;
+    if (laneWidth > 50) fontSize = 22;
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+
+    ctx.textAlign = 'center';
+
+    for (let i = 0; i < numLanes; i++) {
+        // Reverse lane index so lowest note (highest row index) is on the left
+        const displayIndex = (numLanes - 1) - i;
+        const lx = lanesStartX + (displayIndex * laneWidth);
+        ctx.beginPath();
+        ctx.moveTo(lx, 0);
+        ctx.lineTo(lx, canvas.height);
+        ctx.stroke();
+
+        ctx.fillText(scaleNotesSorted[i].replace(/^D:/, ''), lx + laneWidth / 2, canvas.height - 20);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(lanesStartX + numLanes * laneWidth, 0);
+    ctx.lineTo(lanesStartX + numLanes * laneWidth, canvas.height);
+    ctx.stroke();
+
+    const pixelsPerTick = 120 / TICKS_PER_BEAT;
+
+    notes.forEach(note => {
+        if (note.startTick >= maxTicks) return;
+
+        let visualDelta = note.startTick - currentTickWrap;
+
+        if (visualDelta < -(note.lengthTicks)) {
+            visualDelta += maxTicks;
+            // if it's still negative after wrapping (e.g. extremely long note), just let it pass
+        }
+
+        const noteY = hitLineY - (visualDelta * pixelsPerTick);
+        const noteH = Math.max(10, note.lengthTicks * pixelsPerTick);
+        const topY = noteY - noteH;
+
+        if (noteY > 0 && topY < canvas.height) {
+            const isHitting = visualDelta <= 0 && visualDelta > -note.lengthTicks;
+
+            // Reverse row mapping for notes as well
+            const displayIndex = (numLanes - 1) - note.row;
+            const nx = lanesStartX + (displayIndex * laneWidth);
+            const w = laneWidth - 2; // subtle separation
+
+            ctx.fillStyle = isHitting ? '#f1c40f' : '#2ecc71';
+
+            if (isHitting) {
+                ctx.shadowColor = '#f1c40f';
+                ctx.shadowBlur = 15;
+            } else {
+                ctx.shadowBlur = 0;
+            }
+
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(nx + 1, topY, w, noteH, 6); // Add 1px padding
+            } else {
+                ctx.rect(nx + 1, topY, w, noteH);
+            }
+            ctx.fill();
+
+            ctx.strokeStyle = isHitting ? '#ffffff' : '#27ae60';
+            ctx.lineWidth = 1; // thinner stroke for better mobile fit
+            ctx.stroke();
+
+            // Only show text if lane is wide enough and note is tall enough
+            if (noteH > 20 && laneWidth > 20) {
+                ctx.fillStyle = isHitting ? '#000' : '#fff';
+                ctx.shadowBlur = 0;
+                ctx.textBaseline = 'middle';
+                ctx.fillText(scaleNotesSorted[note.row].replace(/^D:/, ''), nx + 1 + w / 2, topY + noteH / 2);
+                ctx.textBaseline = 'alphabetic'; // reset
+            }
+
+            ctx.shadowBlur = 0;
+        }
+    });
 }
 
 // Exporter
@@ -906,8 +1325,8 @@ function exportGridToPhrase() {
     }
 
     let phraseOutput = tokens.join(' ');
-    // Remove trailing rests to clean up output
-    phraseOutput = phraseOutput.replace(/( -\s*)+$/, '');
+    // Do NOT remove trailing rests! 
+    // The user explicitly requested to keep trailing rests to respect the Grid `numBeats` setting length.
 
     if (phraseOutput === '') phraseOutput = '-';
 
@@ -988,6 +1407,7 @@ function importPhraseToGrid(phraseInput) {
         }
 
         const handleNote = (noteObj) => {
+            if (noteObj.type === 'rest') return;
             if (!noteObj.note) {
                 console.warn("Grid Parser Warning: Could not find note property in:", noteObj);
                 return;
