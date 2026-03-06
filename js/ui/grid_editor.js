@@ -50,6 +50,7 @@ export function initGridEditor(deps) {
     const modeDrawBtn = document.getElementById('grid-mode-draw');
     const modeSelectBtn = document.getElementById('grid-mode-select');
     const modeMoveBtn = document.getElementById('grid-mode-move');
+    const modePanBtn = document.getElementById('grid-mode-pan');
     const modeDeleteBtn = document.getElementById('grid-mode-delete');
 
     // Sizing & Res
@@ -89,7 +90,7 @@ export function initGridEditor(deps) {
     if (exportBtn) exportBtn.addEventListener('click', exportGridToPhrase);
 
     const updateModeUI = () => {
-        [modeDrawBtn, modeSelectBtn, modeMoveBtn].forEach(btn => {
+        [modeDrawBtn, modeSelectBtn, modeMoveBtn, modePanBtn].forEach(btn => {
             if (btn) {
                 btn.classList.remove('active-tool');
                 btn.style.background = 'rgba(255,255,255,0.1)';
@@ -102,18 +103,47 @@ export function initGridEditor(deps) {
         let color = '#2ed573';
         if (currentMode === 'select') { activeBtn = modeSelectBtn; color = '#f39c12'; }
         if (currentMode === 'move') { activeBtn = modeMoveBtn; color = '#3498db'; }
+        if (currentMode === 'pan') { activeBtn = modePanBtn; color = '#f1c40f'; }
 
         if (activeBtn) {
             activeBtn.classList.add('active-tool');
-            activeBtn.style.background = `rgba(${color === '#2ed573' ? '46,213,115' : color === '#f39c12' ? '243,156,18' : '52,152,219'}, 0.2)`;
+            if (currentMode === 'draw') {
+                activeBtn.style.background = 'rgba(46,213,115,0.2)';
+            } else if (currentMode === 'select') {
+                activeBtn.style.background = 'rgba(243,156,18,0.2)';
+            } else if (currentMode === 'move') {
+                activeBtn.style.background = 'rgba(52,152,219,0.2)';
+            } else if (currentMode === 'pan') {
+                activeBtn.style.background = 'rgba(241,196,15,0.2)';
+            }
             activeBtn.style.border = `1px solid ${color}`;
             activeBtn.style.color = color;
+        }
+
+        // Contextual Delete Button
+        if (modeDeleteBtn) {
+            if (currentMode === 'select' && selectedNotes.length > 0) {
+                modeDeleteBtn.style.display = 'inline-block';
+            } else {
+                modeDeleteBtn.style.display = 'none';
+            }
+        }
+
+        // Toggle native touch scrolling on the canvas for mobile Pan mode
+        const canvas = document.getElementById('grid-canvas');
+        if (canvas) {
+            if (currentMode === 'pan') {
+                canvas.style.touchAction = 'auto';
+            } else {
+                canvas.style.touchAction = 'none';
+            }
         }
     };
 
     if (modeDrawBtn) modeDrawBtn.addEventListener('click', () => { currentMode = 'draw'; selectedNotes = []; renderCanvas(); updateModeUI(); });
     if (modeSelectBtn) modeSelectBtn.addEventListener('click', () => { currentMode = 'select'; updateModeUI(); renderCanvas(); });
     if (modeMoveBtn) modeMoveBtn.addEventListener('click', () => { currentMode = 'move'; updateModeUI(); renderCanvas(); });
+    if (modePanBtn) modePanBtn.addEventListener('click', () => { currentMode = 'pan'; updateModeUI(); renderCanvas(); });
 
     if (modeDeleteBtn) {
         modeDeleteBtn.addEventListener('click', () => {
@@ -654,11 +684,11 @@ function setupCanvasInteractions(canvas) {
     let dragStartCell = null;
     let initialSelectedStates = [];
 
-    // Touch panning state
     let activePointers = new Map();
     let initialPanScrollLeft = 0;
     let initialPanScrollTop = 0;
     let initialPanCenter = null;
+    let didSaveHistoryOnDown = false;
 
     const getCellFromEvent = (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -682,6 +712,10 @@ function setupCanvasInteractions(canvas) {
 
         // Handle 2-finger panning
         if (activePointers.size >= 2) {
+            if (didSaveHistoryOnDown) {
+                undoHistory();
+                didSaveHistoryOnDown = false;
+            }
             isDragging = false;
             marqueeBox = null;
             const scrollArea = document.getElementById('grid-scroll-area');
@@ -696,6 +730,8 @@ function setupCanvasInteractions(canvas) {
             renderCanvas();
             return;
         }
+
+        didSaveHistoryOnDown = false;
 
         const { row, col, x, y } = getCellFromEvent(e);
         const maxCols = numBeats * currentResolution;
@@ -725,6 +761,7 @@ function setupCanvasInteractions(canvas) {
         if (currentMode === 'move') {
             if (selectedNotes.length === 0) return;
             saveHistoryState();
+            didSaveHistoryOnDown = true;
             isDragging = true;
             dragStartCell = { row, col };
             initialSelectedStates = selectedNotes.map(idx => ({ ...notes[idx] }));
@@ -733,6 +770,7 @@ function setupCanvasInteractions(canvas) {
 
         // Draw mode
         saveHistoryState();
+        didSaveHistoryOnDown = true;
 
         if (existingIdx > -1) {
             dragAction = 'remove';
@@ -774,7 +812,7 @@ function setupCanvasInteractions(canvas) {
             return;
         }
 
-        if (!isDragging) return;
+        if (!isDragging || currentMode === 'pan') return;
         const { row, col, x, y } = getCellFromEvent(e);
         const maxCols = numBeats * currentResolution;
 
@@ -992,11 +1030,20 @@ function togglePlay() {
                 modalBody.style.setProperty('border', 'none', 'important');
             }
 
-            // Move Stop button wrapper margin if needed
+            // Move Stop button wrapper to absolute positioning on the screen
             const stopOverlay = document.getElementById('grid-gh-stop-overlay');
             if (stopOverlay) {
+                stopOverlay.dataset.origPosition = stopOverlay.style.position;
+                stopOverlay.dataset.origTop = stopOverlay.style.top;
+                stopOverlay.dataset.origRight = stopOverlay.style.right;
                 stopOverlay.dataset.origMargin = stopOverlay.style.margin;
-                stopOverlay.style.setProperty('margin', '0 20px 10px 0', 'important');
+                stopOverlay.dataset.origZIndex = stopOverlay.style.zIndex;
+
+                stopOverlay.style.setProperty('position', 'absolute', 'important');
+                stopOverlay.style.setProperty('top', '20px', 'important');
+                stopOverlay.style.setProperty('right', '20px', 'important');
+                stopOverlay.style.setProperty('margin', '0px', 'important');
+                stopOverlay.style.setProperty('z-index', '9999', 'important');
             }
         }
         startPlayback(true);
@@ -1036,12 +1083,22 @@ function togglePlay() {
 
             const stopOverlay = document.getElementById('grid-gh-stop-overlay');
             if (stopOverlay) {
+                stopOverlay.style.position = stopOverlay.dataset.origPosition || '';
+                stopOverlay.style.top = stopOverlay.dataset.origTop || '';
+                stopOverlay.style.right = stopOverlay.dataset.origRight || '';
                 stopOverlay.style.margin = stopOverlay.dataset.origMargin || '';
+                stopOverlay.style.zIndex = stopOverlay.dataset.origZIndex || '';
             }
         }
 
         const container = document.getElementById('grid-labels-container');
         if (container) container.style.display = 'block';
+
+        const labelsWrapper = document.getElementById('grid-labels-wrapper');
+        if (labelsWrapper) labelsWrapper.style.display = 'block';
+
+        const scrollArea = document.getElementById('grid-scroll-area');
+        if (scrollArea) scrollArea.style.overflow = 'auto';
 
         renderCanvas(); // Redraw static grid without playhead
     }
@@ -1166,13 +1223,27 @@ function drawPlayhead() {
 function drawGuitarHeroMode(currentTickWrap, maxTicks) {
     const canvas = document.getElementById('grid-canvas');
     const ctx = canvas.getContext('2d');
-    const scrollArea = document.getElementById('grid-scroll-area');
 
-    if (canvas.width !== scrollArea.clientWidth || canvas.height !== scrollArea.clientHeight) {
-        canvas.width = scrollArea.clientWidth;
-        canvas.height = scrollArea.clientHeight;
-        scrollArea.scrollLeft = 0;
-        scrollArea.scrollTop = 0;
+    // Instead of using grid-scroll-area, use the full modal body width for centering
+    const modalBody = document.querySelector('#grid-editor-modal .modal-body');
+    const fullWidth = modalBody ? modalBody.clientWidth : window.innerWidth;
+    const fullHeight = modalBody ? modalBody.clientHeight : window.innerHeight;
+
+    if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
+        canvas.width = fullWidth;
+        canvas.height = fullHeight;
+
+        // Ensure scroll area doesn't clip the centered canvas
+        const scrollArea = document.getElementById('grid-scroll-area');
+        if (scrollArea) {
+            scrollArea.scrollLeft = 0;
+            scrollArea.scrollTop = 0;
+            scrollArea.style.overflow = 'hidden';
+        }
+
+        // Hide the labels wrapper entirely to free up the space on the left
+        const labelsWrapper = document.getElementById('grid-labels-wrapper');
+        if (labelsWrapper) labelsWrapper.style.display = 'none';
 
         const container = document.getElementById('grid-labels-container');
         if (container) container.style.display = 'none';
