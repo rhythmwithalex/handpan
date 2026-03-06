@@ -1259,18 +1259,60 @@ function drawGuitarHeroMode(currentTickWrap, maxTicks, isLeadIn = false) {
 
     const hitLineY = canvas.height - 60;
 
+    const numLanes = scaleNotesSorted.length;
+    const maxLaneWidth = 60;
+    const laneWidth = Math.min(maxLaneWidth, canvas.width / numLanes);
+    const lanesStartX = (canvas.width - (numLanes * laneWidth)) / 2;
+
+    const pixelsPerTick = 120 / TICKS_PER_BEAT;
+
+    // Pre-calculate which lanes are currently hitting to apply bounce
+    const laneHits = new Array(numLanes).fill(false);
+    notes.forEach(note => {
+        if (note.startTick >= maxTicks) return;
+        let visualDelta = note.startTick - currentTickWrap;
+        if (visualDelta < -(note.lengthTicks)) visualDelta += maxTicks;
+
+        const isHitting = visualDelta <= 0 && visualDelta > -note.lengthTicks;
+        if (isHitting) {
+            const displayIndex = (numLanes - 1) - note.row;
+            laneHits[displayIndex] = true;
+        }
+    });
+
     // Hit line
     ctx.strokeStyle = '#f39c12';
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(0, hitLineY);
+
+    // Straight line till the first lane
+    if (lanesStartX > 0) {
+        ctx.lineTo(lanesStartX, hitLineY);
+    }
+
+    // Draw bouncy segmented line
+    for (let i = 0; i < numLanes; i++) {
+        const lx = lanesStartX + (i * laneWidth);
+        const rx = lx + laneWidth;
+        const bounceOffset = laneHits[i] ? 4 : 0; // 4px bounce down
+
+        // If this lane has a bounce, we step down. 
+        // If not, it stays at hitLineY.
+        const segmentY = hitLineY + bounceOffset;
+
+        ctx.lineTo(lx, segmentY);
+        ctx.lineTo(rx, segmentY);
+    }
+
+    // Straight line from the last lane to the edge
+    const lanesEndX = lanesStartX + (numLanes * laneWidth);
+    if (lanesEndX < canvas.width) {
+        ctx.lineTo(lanesEndX, hitLineY);
+    }
+
     ctx.lineTo(canvas.width, hitLineY);
     ctx.stroke();
-
-    const numLanes = scaleNotesSorted.length;
-    const maxLaneWidth = 60;
-    const laneWidth = Math.min(maxLaneWidth, canvas.width / numLanes);
-    const lanesStartX = (canvas.width - (numLanes * laneWidth)) / 2;
 
     ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.lineWidth = 1;
@@ -1302,8 +1344,6 @@ function drawGuitarHeroMode(currentTickWrap, maxTicks, isLeadIn = false) {
     ctx.lineTo(lanesStartX + numLanes * laneWidth, canvas.height);
     ctx.stroke();
 
-    const pixelsPerTick = 120 / TICKS_PER_BEAT;
-
     const visibleLoops = Math.ceil(canvas.height / (maxTicks * pixelsPerTick)) + 1;
 
     notes.forEach(note => {
@@ -1322,42 +1362,85 @@ function drawGuitarHeroMode(currentTickWrap, maxTicks, isLeadIn = false) {
 
             if (noteY > 0 && topY < canvas.height) {
                 const isHitting = visualDelta <= 0 && visualDelta > -note.lengthTicks;
+                const hitDepth = -visualDelta; // how far into the note we are
 
                 // Reverse row mapping for notes as well
                 const displayIndex = (numLanes - 1) - note.row;
                 const nx = lanesStartX + (displayIndex * laneWidth);
                 const w = laneWidth - 2; // subtle separation
 
-                ctx.fillStyle = isHitting ? '#f1c40f' : '#2ecc71';
+                // Default colors (green)
+                let fillColor = '#2ecc71';
+                let strokeColor = '#27ae60';
+                let textColor = '#fff';
+                let alpha = 1.0;
 
+                // Stop going down once it hits the line, and fade out quickly
                 if (isHitting) {
+                    fillColor = '#f1c40f'; // Yellow when hitting
+                    strokeColor = '#ffffff';
+                    textColor = '#000';
+
                     ctx.shadowColor = '#f1c40f';
                     ctx.shadowBlur = 15;
+
+                    // Fade out quickly over 70 ticks (about 1/8th of a beat at 480 PPQ)
+                    // You can adjust 'fadeTicks' to make it vanish faster or slower
+                    const fadeTicks = 80;
+                    alpha = Math.max(0, 1.0 - (hitDepth / fadeTicks));
+                } else if (visualDelta < -note.lengthTicks) {
+                    // Already passed completely
+                    alpha = 0;
+                    ctx.shadowBlur = 0;
                 } else {
                     ctx.shadowBlur = 0;
                 }
+
+                if (alpha <= 0) continue; // Skip drawing
+
+                ctx.globalAlpha = alpha;
+
+                // Clamp drawing to the hitline
+                let drawTopY = topY;
+                let drawNoteH = noteH;
+
+                // If note has hit the line, we clip the bottom
+                if (isHitting) {
+                    drawNoteH = Math.max(0, noteH - (hitDepth * pixelsPerTick));
+                    drawTopY = hitLineY - drawNoteH;
+                }
+
+                if (drawNoteH <= 0) {
+                    ctx.globalAlpha = 1.0; // Reset
+                    continue;
+                }
+
+                ctx.fillStyle = fillColor;
 
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(nx + 1, topY, w, noteH, 6); // Add 1px padding
+                    // Reduce border radius dynamically if note gets too short
+                    const r = Math.min(6, drawNoteH / 2);
+                    ctx.roundRect(nx + 1, drawTopY, w, drawNoteH, r);
                 } else {
-                    ctx.rect(nx + 1, topY, w, noteH);
+                    ctx.rect(nx + 1, drawTopY, w, drawNoteH);
                 }
                 ctx.fill();
 
-                ctx.strokeStyle = isHitting ? '#ffffff' : '#27ae60';
-                ctx.lineWidth = 1; // thinner stroke for better mobile fit
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 1;
                 ctx.stroke();
 
                 // Only show text if lane is wide enough and note is tall enough
-                if (noteH > 20 && laneWidth > 20) {
-                    ctx.fillStyle = isHitting ? '#000' : '#fff';
+                if (drawNoteH > 20 && laneWidth > 20) {
+                    ctx.fillStyle = textColor;
                     ctx.shadowBlur = 0;
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(scaleNotesSorted[note.row].replace(/^D:/, ''), nx + 1 + w / 2, topY + noteH / 2);
+                    ctx.fillText(scaleNotesSorted[note.row].replace(/^D:/, ''), nx + 1 + w / 2, drawTopY + drawNoteH / 2);
                     ctx.textBaseline = 'alphabetic'; // reset
                 }
 
+                ctx.globalAlpha = 1.0;
                 ctx.shadowBlur = 0;
             }
         }
