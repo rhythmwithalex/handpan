@@ -733,6 +733,11 @@ function setupCanvasInteractions(canvas) {
 
         didSaveHistoryOnDown = false;
 
+        if (currentMode === 'pan') {
+            // Let the browser handle standard touch action scrolling natively
+            return;
+        }
+
         const { row, col, x, y } = getCellFromEvent(e);
         const maxCols = numBeats * currentResolution;
         if (row < 0 || row >= scaleNotesSorted.length || col < 0 || col >= maxCols) return;
@@ -1184,7 +1189,7 @@ function drawPlayhead() {
     }
 
     if (isGuitarHeroMode) {
-        drawGuitarHeroMode(currentTickWrap, maxTicks);
+        drawGuitarHeroMode(currentTickWrap, maxTicks, elapsedTicks < 0);
         animationFrameId = requestAnimationFrame(drawPlayhead);
         return;
     }
@@ -1220,7 +1225,7 @@ function drawPlayhead() {
     animationFrameId = requestAnimationFrame(drawPlayhead);
 }
 
-function drawGuitarHeroMode(currentTickWrap, maxTicks) {
+function drawGuitarHeroMode(currentTickWrap, maxTicks, isLeadIn = false) {
     const canvas = document.getElementById('grid-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1299,59 +1304,62 @@ function drawGuitarHeroMode(currentTickWrap, maxTicks) {
 
     const pixelsPerTick = 120 / TICKS_PER_BEAT;
 
+    const visibleLoops = Math.ceil(canvas.height / (maxTicks * pixelsPerTick)) + 1;
+
     notes.forEach(note => {
         if (note.startTick >= maxTicks) return;
 
-        let visualDelta = note.startTick - currentTickWrap;
+        for (let k = -1; k <= visibleLoops; k++) {
+            // If we are in the initial lead-in phase, do not draw the "previous" loop (k=-1) 
+            // because there was no previous loop. It would just appear as phantom notes.
+            if (isLeadIn && k < 0) continue;
 
-        if (visualDelta < -(note.lengthTicks)) {
-            visualDelta += maxTicks;
-            // if it's still negative after wrapping (e.g. extremely long note), just let it pass
-        }
+            let visualDelta = note.startTick - currentTickWrap + (k * maxTicks);
 
-        const noteY = hitLineY - (visualDelta * pixelsPerTick);
-        const noteH = Math.max(10, note.lengthTicks * pixelsPerTick);
-        const topY = noteY - noteH;
+            const noteY = hitLineY - (visualDelta * pixelsPerTick);
+            const noteH = Math.max(10, note.lengthTicks * pixelsPerTick);
+            const topY = noteY - noteH;
 
-        if (noteY > 0 && topY < canvas.height) {
-            const isHitting = visualDelta <= 0 && visualDelta > -note.lengthTicks;
+            if (noteY > 0 && topY < canvas.height) {
+                const isHitting = visualDelta <= 0 && visualDelta > -note.lengthTicks;
 
-            // Reverse row mapping for notes as well
-            const displayIndex = (numLanes - 1) - note.row;
-            const nx = lanesStartX + (displayIndex * laneWidth);
-            const w = laneWidth - 2; // subtle separation
+                // Reverse row mapping for notes as well
+                const displayIndex = (numLanes - 1) - note.row;
+                const nx = lanesStartX + (displayIndex * laneWidth);
+                const w = laneWidth - 2; // subtle separation
 
-            ctx.fillStyle = isHitting ? '#f1c40f' : '#2ecc71';
+                ctx.fillStyle = isHitting ? '#f1c40f' : '#2ecc71';
 
-            if (isHitting) {
-                ctx.shadowColor = '#f1c40f';
-                ctx.shadowBlur = 15;
-            } else {
+                if (isHitting) {
+                    ctx.shadowColor = '#f1c40f';
+                    ctx.shadowBlur = 15;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(nx + 1, topY, w, noteH, 6); // Add 1px padding
+                } else {
+                    ctx.rect(nx + 1, topY, w, noteH);
+                }
+                ctx.fill();
+
+                ctx.strokeStyle = isHitting ? '#ffffff' : '#27ae60';
+                ctx.lineWidth = 1; // thinner stroke for better mobile fit
+                ctx.stroke();
+
+                // Only show text if lane is wide enough and note is tall enough
+                if (noteH > 20 && laneWidth > 20) {
+                    ctx.fillStyle = isHitting ? '#000' : '#fff';
+                    ctx.shadowBlur = 0;
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(scaleNotesSorted[note.row].replace(/^D:/, ''), nx + 1 + w / 2, topY + noteH / 2);
+                    ctx.textBaseline = 'alphabetic'; // reset
+                }
+
                 ctx.shadowBlur = 0;
             }
-
-            ctx.beginPath();
-            if (ctx.roundRect) {
-                ctx.roundRect(nx + 1, topY, w, noteH, 6); // Add 1px padding
-            } else {
-                ctx.rect(nx + 1, topY, w, noteH);
-            }
-            ctx.fill();
-
-            ctx.strokeStyle = isHitting ? '#ffffff' : '#27ae60';
-            ctx.lineWidth = 1; // thinner stroke for better mobile fit
-            ctx.stroke();
-
-            // Only show text if lane is wide enough and note is tall enough
-            if (noteH > 20 && laneWidth > 20) {
-                ctx.fillStyle = isHitting ? '#000' : '#fff';
-                ctx.shadowBlur = 0;
-                ctx.textBaseline = 'middle';
-                ctx.fillText(scaleNotesSorted[note.row].replace(/^D:/, ''), nx + 1 + w / 2, topY + noteH / 2);
-                ctx.textBaseline = 'alphabetic'; // reset
-            }
-
-            ctx.shadowBlur = 0;
         }
     });
 }
