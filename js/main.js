@@ -1,5 +1,5 @@
 
-import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, getAudioContext, setBaseKickFrequency } from './audio/engine.js';
+import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, getAudioContext, setBaseKickFrequency, setMasterVolume } from './audio/engine.js';
 import { startProgression, stopProgression, toggleProgression, setProgressionCallbacks, setTempo, isPlaying as isProgressionPlaying } from './logic/progression.js';
 import { loadLastScale, saveLastScale, getAllScales, initCustomScales } from './data/scales.js';
 import { generateChords, parseNoteName, getFrequencyForNoteName } from './logic/chords.js';
@@ -10,6 +10,7 @@ import { initChordGrid, renderChordGrid, toggleChordSort } from './ui/chord_grid
 import { initProgressionUI, addChordToProgression, updateProgressionItem, getProgressionChords, clearProgression, exportProgressionData, loadProgressionData } from './ui/progression.js';
 import { initEditor, openEditor } from './ui/editor.js';
 import { initInspirations } from './ui/inspirations.js';
+import { initGridEditor, openGridEditor } from './ui/grid_editor.js';
 import { saveStateToLocal, loadStateFromLocal, generateShareUrl, decodeUrlData } from './data/storage.js';
 
 // Application State
@@ -63,8 +64,27 @@ function initApp() {
         }
     });
 
+    // Global Audio Controls
+    const masterVolSlider = document.getElementById('master-volume');
+    const volValueDisplay = document.getElementById('vol-value');
+    if (masterVolSlider) {
+        masterVolSlider.addEventListener('input', (e) => {
+            if (volValueDisplay) volValueDisplay.textContent = e.target.value + '%';
+            setMasterVolume(parseInt(e.target.value));
+        });
+    }
+
+    const phraseSizeSlider = document.getElementById('phrase-size-slider');
+    const phraseSizeDisplay = document.getElementById('phrase-size-value');
+    if (phraseSizeSlider) {
+        phraseSizeSlider.addEventListener('input', (e) => {
+            if (phraseSizeDisplay) phraseSizeDisplay.textContent = e.target.value;
+        });
+    }
+
     initProgressionUI('progression-stage', {
         openEditor: (item, defaultName) => openEditor(item, defaultName, currentScale),
+        openGridEditor: (phraseString, itemId) => openGridEditor(phraseString, itemId),
         onUpdate: () => {
             saveCurrentState();
         },
@@ -105,6 +125,13 @@ function initApp() {
             }
             saveCurrentState();
         }
+    });
+
+    initGridEditor({
+        getScale: () => currentScale,
+        openEditor: (item, defaultName) => openEditor(item, defaultName, currentScale),
+        updateProgressionItem: (item, data) => updateProgressionItem(item, data),
+        parseText: (text) => parseRhythmString(text, currentScale)
     });
 
     // 3. Audio & Scheduler Setup

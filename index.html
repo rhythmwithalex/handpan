@@ -161,6 +161,8 @@
                     <h3 class="section-title">Progression Stage</h3>
                     <div class="header-actions">
                         <button id="add-custom-chord" class="clear-btn add" title="Add Musical Phrase">+</button>
+                        <button id="open-grid-editor-btn" class="clear-btn add" title="Open Grid Editor (Beta)"
+                            style="background: rgba(118, 75, 162, 0.15); border: 1px solid rgba(118, 75, 162, 0.3); color: var(--accent-light);">▦</button>
                         <button id="save-comp-btn" class="clear-btn" title="Save Composition">💾</button>
                         <button id="load-comp-btn" class="clear-btn" title="Load Composition">📂</button>
                         <button id="share-progression" class="clear-btn" title="Share Progression Link">🔗</button>
@@ -179,6 +181,15 @@
                     <div class="control-group">
                         <label>BPM: <span id="bpm-value">80</span></label>
                         <input type="range" id="bpm-slider" min="30" max="280" value="80">
+                    </div>
+                    <div class="control-group">
+                        <label>Vol: <span id="vol-value">80%</span></label>
+                        <input type="range" id="master-volume" min="0" max="100" value="80">
+                    </div>
+                    <div class="control-group">
+                        <label>Size: <span id="phrase-size-value">8</span></label>
+                        <input type="range" id="phrase-size-slider" min="2" max="32" value="8" step="1"
+                            title="Default phrase length for empty Grid Editor">
                     </div>
                     <input type="number" id="repeat-count" value="2" style="display: none;">
                 </div>
@@ -319,6 +330,150 @@
                     <button class="premium-btn close-save-share-btn-secondary"
                         style="border-radius: 20px; padding: 8px 20px;">Got it</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid Editor Modal (Beta) -->
+    <div id="grid-editor-modal" class="modal-overlay" style="display: none; z-index: 2050;">
+        <div class="modal-content glass-card"
+            style="max-width: 650px; padding: 25px; display: flex; flex-direction: column; max-height: 90vh;">
+            <div class="modal-header" style="margin-bottom: 15px;">
+                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0;">Grid Editor (Beta)
+                </h2>
+                <button id="close-grid-editor-modal" class="close-btn" style="top: -5px; right: 0;">&times;</button>
+            </div>
+
+            <!-- Toolbar Row 1: Length, BPM, and Div -->
+            <div
+                style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px;">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label
+                            style="font-size: 0.85rem; font-weight: 500; opacity: 0.8; white-space: nowrap;">Length:</label>
+                        <button id="grid-length-minus" class="icon-btn"
+                            style="background: rgba(0,0,0,0.05); border-radius: 4px; padding: 2px 8px;">-</button>
+                        <span id="grid-length-display"
+                            style="font-size: 0.9rem; font-weight: bold; width: 24px; text-align: center;">8</span>
+                        <button id="grid-length-plus" class="icon-btn"
+                            style="background: rgba(0,0,0,0.05); border-radius: 4px; padding: 2px 8px;">+</button>
+                        <button id="grid-length-x2" class="premium-btn-small"
+                            style="padding: 2px 8px; font-size: 0.8rem; margin-left: 2px;">x2</button>
+                    </div>
+
+                    <!-- BPM Control Duplicated from main UI -->
+                    <div
+                        style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; opacity: 0.7;">BPM</span>
+                        <input type="range" id="grid-bpm-slider" min="30" max="250" value="80"
+                            style="width: 60px; height: 4px; cursor: pointer;">
+                        <span id="grid-bpm-value"
+                            style="font-size: 0.85rem; font-weight: bold; width: 28px; text-align: right;">80</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="font-size: 0.85rem; font-weight: 500; opacity: 0.8;">Div:</label>
+                        <select id="grid-resolution-select" class="premium-text-input"
+                            style="padding: 4px; font-size: 0.85rem; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); color: var(--text-main);">
+                            <option value="1">1/4</option>
+                            <option value="2">1/8</option>
+                            <option value="3">1/12</option>
+                            <option value="4">1/16</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Play/Clear stays Top Right -->
+                <div style="display: flex; gap: 8px; flex-shrink: 0; margin-left: auto;">
+                    <button id="grid-play-btn" class="premium-btn-small"
+                        style="padding: 4px 12px; font-size: 0.85rem; background: #2ed573; color: white; border-color: #2ed573; white-space: nowrap;">Play
+                        ▶</button>
+                    <button id="grid-clear-btn" class="secondary-btn"
+                        style="padding: 4px 12px; font-size: 0.85rem; white-space: nowrap;">Clear</button>
+                </div>
+            </div>
+
+            <!-- Toolbar Row 2: Edit Tools, Zoom, Undo/Redo -->
+            <div
+                style="display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 10px; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 8px; gap: 10px;">
+                <!-- Tools -->
+                <div
+                    style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.4); padding: 4px; border-radius: 6px;">
+                    <button id="grid-mode-draw" class="icon-btn active-tool" title="Draw Mode"
+                        style="background: rgba(46, 213, 115, 0.2); border: 1px solid #2ed573; border-radius: 4px; padding: 4px 10px; font-size: 1.1rem; color: #2ed573; font-weight: bold;">✎</button>
+                    <button id="grid-mode-select" class="icon-btn" title="Select Mode"
+                        style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 1.1rem;">⬚</button>
+                    <button id="grid-mode-move" class="icon-btn" title="Move Mode"
+                        style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 1.1rem;">✥</button>
+                </div>
+
+                <!-- Zoom Controls -->
+                <div
+                    style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.4); padding: 4px; border-radius: 6px;">
+                    <span style="font-size: 0.75rem; font-weight: bold; opacity: 0.7; padding: 0 4px;">ZOOM</span>
+                    <div style="display: flex; align-items: center; gap: 2px;">
+                        <span style="font-size: 0.7rem; opacity: 0.6;">H:</span>
+                        <button id="grid-zoom-h-out" class="icon-btn"
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">-</button>
+                        <button id="grid-zoom-h-in" class="icon-btn"
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">+</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 2px;">
+                        <span style="font-size: 0.7rem; opacity: 0.6; margin-left: 4px;">V:</span>
+                        <button id="grid-zoom-v-out" class="icon-btn"
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">-</button>
+                        <button id="grid-zoom-v-in" class="icon-btn"
+                            style="background: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem;">+</button>
+                    </div>
+                </div>
+
+                <!-- Undo/Redo -->
+                <div style="display: flex; gap: 8px; margin-left: auto;">
+                    <button id="grid-undo-btn" class="icon-btn" title="Undo"
+                        style="background: rgba(255,255,255,0.4); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 4px 12px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px;">⃔</button>
+                    <button id="grid-redo-btn" class="icon-btn" title="Redo"
+                        style="background: rgba(255,255,255,0.4); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 4px 12px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px;">⃕</button>
+                </div>
+            </div>
+
+            <!-- The Grid Container -->
+            <div class="modal-body"
+                style="flex: 1; display: flex; flex-direction: column; background: #e9ecef; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); overflow: hidden; min-height: 250px;">
+
+                <!-- Numbering Track (Sticky Header) -->
+                <div
+                    style="display: flex; position: relative; overflow: hidden; background: rgba(0,0,0,0.08); border-bottom: 1px solid rgba(0,0,0,0.1); height: 24px; flex-shrink: 0;">
+                    <!-- Empty corner over labels -->
+                    <div style="width: 50px; flex-shrink: 0; border-right: 1px solid rgba(0,0,0,0.1);"></div>
+                    <!-- Scrollable numbers track, synced with canvas scroll -->
+                    <div id="grid-numbers-scroll-area" style="flex: 1; overflow: hidden; position: relative;">
+                        <div id="grid-numbers-track"
+                            style="position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex: 1; display: flex; position: relative; overflow: hidden;">
+                    <!-- Fixed Y-axis labels (vertical scroll hidden but synced via JS) -->
+                    <div id="grid-labels-wrapper"
+                        style="width: 50px; flex-shrink: 0; background: rgba(0,0,0,0.05); border-right: 1px solid rgba(0,0,0,0.1); overflow: hidden; position: relative;">
+                        <div id="grid-labels-container" style="position: absolute; top: 0; left: 0; width: 100%;">
+                            <!-- JS populates labels here -->
+                        </div>
+                    </div>
+                    <!-- Scrollable Canvas -->
+                    <div id="grid-scroll-area" style="flex: 1; overflow: auto; position: relative;">
+                        <canvas id="grid-canvas"
+                            style="display: block; cursor: crosshair; touch-action: none;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button id="grid-cancel-btn" class="secondary-btn"
+                    style="border-radius: 20px; padding: 8px 16px;">Cancel</button>
+                <button id="grid-export-btn" class="premium-btn" style="border-radius: 20px; padding: 8px 20px;">Export
+                    to Phrase</button>
             </div>
         </div>
     </div>

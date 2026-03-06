@@ -2,6 +2,7 @@
 import { NOTE_TO_MIDI } from '../data/constants.js';
 
 let audioCtx = null;
+let masterVolumeNode = null;
 let reverbNode = null;
 let reverbGain = null;
 let activeNodes = []; // Track active oscillators/gain nodes
@@ -23,6 +24,11 @@ export function initAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+        // Master Volume
+        masterVolumeNode = audioCtx.createGain();
+        masterVolumeNode.gain.value = 0.8; // Default to 80%
+        masterVolumeNode.connect(audioCtx.destination);
+
         // Reverb Setup
         reverbNode = audioCtx.createConvolver();
         reverbGain = audioCtx.createGain();
@@ -43,10 +49,17 @@ export function initAudio() {
 
         reverbNode.buffer = impulse;
         reverbNode.connect(reverbGain);
-        reverbGain.connect(audioCtx.destination);
+        reverbGain.connect(masterVolumeNode);
     }
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
+    }
+}
+
+export function setMasterVolume(val) {
+    if (masterVolumeNode && audioCtx) {
+        const normalized = Math.max(0, Math.min(100, val)) / 100;
+        masterVolumeNode.gain.setValueAtTime(normalized, audioCtx.currentTime);
     }
 }
 
@@ -91,7 +104,42 @@ export function playTone(freq, noteName, duration = 2.4, startTime = 0, suppress
     filter.Q.value = 0.7;
 
     filter.connect(masterGain);
-    masterGain.connect(audioCtx.destination);
+
+    // Stereo Panning
+    let panValue = 0;
+    if (noteName) {
+        try {
+            const cleanName = noteName.replace(/^D:/, '');
+            const element = document.getElementById('note-' + cleanName);
+            if (element) {
+                const circle = element.querySelector('circle.note-area');
+                if (circle) {
+                    const cx = parseFloat(circle.getAttribute('cx'));
+                    if (!isNaN(cx)) {
+                        // Handpan SVG width is 500, center is 250.
+                        // Map values from roughly 100 to 400 into -1 to +1 range
+                        panValue = (cx - 250) / 150;
+                        panValue = Math.max(-1, Math.min(1, panValue));
+                    }
+                }
+            }
+        } catch (e) {
+            // fallback to center if calculation fails
+        }
+    }
+
+    // Connect chain: filter -> masterGain -> panner -> masterVolumeNode
+    let lastNode = masterGain;
+
+    // StereoPanner is standard, PannerNode is fallback
+    if (audioCtx.createStereoPanner) {
+        const panner = audioCtx.createStereoPanner();
+        panner.pan.value = panValue;
+        masterGain.connect(panner);
+        lastNode = panner;
+    }
+
+    lastNode.connect(masterVolumeNode);
 
     if (reverbNode) {
         masterGain.connect(reverbNode);
@@ -199,7 +247,7 @@ export function playTak(startTime, isAlt = false, isGhost = false, suppressVisua
 
     source.connect(filter);
     filter.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(masterVolumeNode);
 
     if (reverbNode) {
         // Create an intermediate gain node to control how much goes to reverb (reduce by 30%)

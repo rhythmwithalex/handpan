@@ -1181,6 +1181,9 @@ body:not(.dark-mode) .premium-btn-small {
 .progression-right-group {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-end;
 }
 
 .progression-right-group .control-group {
@@ -1974,8 +1977,8 @@ body:not(.dark-mode) .premium-btn-small {
         justify-content: center;
         width: 100%;
         border-top: 1px solid rgba(0, 0, 0, 0.05);
-        /* subtle divider */
-        padding-top: 10px;
+        padding-top: 12px;
+        gap: 15px;
     }
 
     .dark-mode .progression-right-group {

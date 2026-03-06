@@ -3,7 +3,7 @@ import { sortNotesByPitch } from '../logic/chords.js';
 
 let stageContainer = null;
 let dependencies = {};
-// dependencies: { openEditor, onUpdate, getScale, parseText, stopPlayback }
+// dependencies: { openEditor, openGridEditor, onUpdate, getScale, parseText, stopPlayback }
 
 export function initProgressionUI(containerId, deps) {
     stageContainer = document.getElementById(containerId);
@@ -213,7 +213,7 @@ export function updateProgressionItem(item, data) {
     const validNotes = dependencies.parseText(data.text, currentScale);
 
     item.dataset.notes = JSON.stringify(validNotes);
-    item.dataset.sourceText = data.text;
+    item.dataset.sourceText = data.text; // Ensure sourceText is ALWAYS updated
 
     if (data.repeats > 0) {
         item.dataset.repeats = data.repeats;
@@ -278,8 +278,21 @@ function renderItemDOM(item, label, notesHTML) {
         if (dependencies.onUpdate) dependencies.onUpdate();
     };
 
+    const gridBtn = document.createElement('span');
+    gridBtn.title = "Edit in Grid Editor";
+    gridBtn.style.opacity = '0.7';
+    gridBtn.style.cursor = 'pointer';
+    gridBtn.style.display = 'inline-flex';
+    gridBtn.style.alignItems = 'center';
+    gridBtn.innerHTML = '<span style="font-size: 14px; line-height: 1;">▦</span>';
+    gridBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (dependencies.openGridEditor) dependencies.openGridEditor(item);
+    };
+
     titleContainer.appendChild(titleSpan);
     titleContainer.appendChild(editIcon);
+    titleContainer.appendChild(gridBtn);
     titleContainer.appendChild(duplicateBtn);
 
     const actionsDiv = document.createElement('div');
