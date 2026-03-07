@@ -258,10 +258,12 @@ function renderItemDOM(item, label, notesHTML) {
     titleSpan.style.fontWeight = 'bold';
 
     const editIcon = document.createElement('span');
-    editIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.7;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+    editIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.7;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
     editIcon.style.cursor = 'pointer';
     editIcon.style.display = 'inline-flex';
     editIcon.style.alignItems = 'center';
+    editIcon.style.padding = '4px'; // Make click target larger
+    editIcon.style.marginLeft = '4px';
 
     const duplicateBtn = document.createElement('span');
     duplicateBtn.title = "Duplicate";
@@ -269,7 +271,8 @@ function renderItemDOM(item, label, notesHTML) {
     duplicateBtn.style.cursor = 'pointer';
     duplicateBtn.style.display = 'inline-flex';
     duplicateBtn.style.alignItems = 'center';
-    duplicateBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    duplicateBtn.style.padding = '4px'; // Make click target larger
+    duplicateBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
     duplicateBtn.onclick = (e) => {
         e.stopPropagation();
         const currentNotes = item.dataset.notes ? JSON.parse(item.dataset.notes) : [];
@@ -284,7 +287,8 @@ function renderItemDOM(item, label, notesHTML) {
     gridBtn.style.cursor = 'pointer';
     gridBtn.style.display = 'inline-flex';
     gridBtn.style.alignItems = 'center';
-    gridBtn.innerHTML = '<span style="font-size: 14px; line-height: 1;">▦</span>';
+    gridBtn.style.padding = '4px'; // Make click target larger
+    gridBtn.innerHTML = '<span style="font-size: 18px; line-height: 1;">▦</span>';
     gridBtn.onclick = (e) => {
         e.stopPropagation();
         if (dependencies.openGridEditor) dependencies.openGridEditor(item);
@@ -297,7 +301,7 @@ function renderItemDOM(item, label, notesHTML) {
 
     const actionsDiv = document.createElement('div');
     actionsDiv.style.display = 'flex';
-    actionsDiv.style.gap = '5px';
+    actionsDiv.style.gap = '10px'; // Increase gap from 5px to 10px
 
     const removeSpan = document.createElement('span');
     removeSpan.className = 'remove-btn';

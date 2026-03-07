@@ -1120,7 +1120,25 @@ function startPlayback(isFirstLoop = true) {
 
     // GH lead-in delay 
     const isGH = typeof isGuitarHeroMode !== 'undefined' && isGuitarHeroMode;
-    const leadInSec = (isGH && isFirstLoop) ? 2.0 : 0;
+    let leadInSec = 0;
+
+    if (isGH && isFirstLoop) {
+        // Calculate exact time for a note to fall from top of screen to hitline
+        const modalBody = document.querySelector('#grid-editor-modal .modal-body');
+        const fullHeight = modalBody ? modalBody.clientHeight : window.innerHeight;
+        const hitLineY = fullHeight - 60;
+
+        const pixelsPerTick = 120 / TICKS_PER_BEAT;
+        const pixelsPerSecond = pixelsPerTick * ticksPerSecond;
+
+        // Time = Distance / Speed
+        const fallTime = hitLineY / pixelsPerSecond;
+
+        // At fast tempos, fallTime is small (e.g. 0.5s). We add a little buffer (0.5s) 
+        // so it doesn't instantly appear. At slow tempos, fallTime could be 3s+, 
+        // stringing the user along. We cap the total wait time to 1.5 seconds.
+        leadInSec = Math.min(1.5, fallTime + 0.5);
+    }
 
     // playStartTime is updated every loop iteration
     // If GH mode and first loop, we set the logical start time 2 seconds in the future
@@ -1295,7 +1313,7 @@ function drawGuitarHeroMode(currentTickWrap, maxTicks, isLeadIn = false) {
     for (let i = 0; i < numLanes; i++) {
         const lx = lanesStartX + (i * laneWidth);
         const rx = lx + laneWidth;
-        const bounceOffset = laneHits[i] ? 4 : 0; // 4px bounce down
+        const bounceOffset = laneHits[i] ? 9 : 0; // 9px bounce down
 
         // If this lane has a bounce, we step down. 
         // If not, it stays at hitLineY.
