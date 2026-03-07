@@ -1,5 +1,5 @@
 import { NOTE_TO_MIDI } from '../data/constants.js';
-import { playTone, getAudioContext, stopAllSounds } from '../audio/engine.js';
+import { playTone, playTak, getAudioContext, stopAllSounds } from '../audio/engine.js';
 import { getFrequencyForNoteName } from '../logic/chords.js';
 
 let dependencies = {};
@@ -49,6 +49,7 @@ export function initGridEditor(deps) {
     // Modes
     const modeDrawBtn = document.getElementById('grid-mode-draw');
     const modeSelectBtn = document.getElementById('grid-mode-select');
+    const modeSelectAllBtn = document.getElementById('grid-mode-select-all');
     const modeMoveBtn = document.getElementById('grid-mode-move');
     const modePanBtn = document.getElementById('grid-mode-pan');
     const modeDeleteBtn = document.getElementById('grid-mode-delete');
@@ -76,6 +77,7 @@ export function initGridEditor(deps) {
 
     if (gridModal) {
         gridModal.addEventListener('click', (e) => {
+            if (window.getSelection().toString().length > 0) return;
             if (e.target === gridModal) closeGridEditor();
         });
     }
@@ -142,6 +144,15 @@ export function initGridEditor(deps) {
 
     if (modeDrawBtn) modeDrawBtn.addEventListener('click', () => { currentMode = 'draw'; selectedNotes = []; renderCanvas(); updateModeUI(); });
     if (modeSelectBtn) modeSelectBtn.addEventListener('click', () => { currentMode = 'select'; updateModeUI(); renderCanvas(); });
+    if (modeSelectAllBtn) modeSelectAllBtn.addEventListener('click', () => {
+        currentMode = 'select';
+        selectedNotes = [];
+        for (let i = 0; i < notes.length; i++) {
+            if (notes[i]) selectedNotes.push(i);
+        }
+        updateModeUI();
+        renderCanvas();
+    });
     if (modeMoveBtn) modeMoveBtn.addEventListener('click', () => { currentMode = 'move'; updateModeUI(); renderCanvas(); });
     if (modePanBtn) modePanBtn.addEventListener('click', () => { currentMode = 'pan'; updateModeUI(); renderCanvas(); });
 
@@ -237,6 +248,27 @@ export function initGridEditor(deps) {
                 mainBpmSlider.dispatchEvent(new Event('input'));
             }
         });
+
+        if (gridBpmValue) {
+            gridBpmValue.addEventListener('click', () => {
+                const newBpm = prompt("Enter BPM (30-280):", gridBpmSlider.value);
+                if (newBpm !== null) {
+                    let parsed = parseInt(newBpm);
+                    if (!isNaN(parsed)) {
+                        if (parsed < 30) parsed = 30;
+                        if (parsed > 280) parsed = 280;
+                        gridBpmSlider.value = parsed;
+                        gridBpmValue.textContent = parsed;
+
+                        if (mainBpmSlider) {
+                            mainBpmSlider.value = parsed;
+                            if (mainBpmValue) mainBpmValue.textContent = parsed;
+                            mainBpmSlider.dispatchEvent(new Event('input'));
+                        }
+                    }
+                }
+            });
+        }
     }
 
     if (ghBtn) {
@@ -384,6 +416,9 @@ export function openGridEditor(phraseString = null, itemId = null) {
     parsed.sort((a, b) => b.value - a.value);
     scaleNotesSorted = parsed.map(p => p.original);
 
+    // Add Percussion tracks at the bottom
+    scaleNotesSorted.push('T', 't');
+
     editingItem = null;
     if (itemId) {
         editingItem = document.getElementById(itemId);
@@ -393,9 +428,14 @@ export function openGridEditor(phraseString = null, itemId = null) {
         phraseString = editingItem.dataset.sourceText || editingItem.dataset.rawText || editingItem.dataset.pattern;
     }
 
+    const nameInput = document.getElementById('grid-phrase-name');
+    const repeatsInput = document.getElementById('grid-phrase-repeats');
+
     if (phraseString && typeof phraseString === 'string') {
         // Load from existing phrase text
         importPhraseToGrid(phraseString);
+        if (nameInput) nameInput.value = editingItem ? (editingItem.querySelector('.prog-label') ? editingItem.querySelector('.prog-label').textContent : 'Phrase') : 'Phrase';
+        if (repeatsInput) repeatsInput.value = editingItem ? (editingItem.dataset.repeats || 1) : 1;
     } else {
         // Initial empty state if none exists
         notes = [];
@@ -404,6 +444,9 @@ export function openGridEditor(phraseString = null, itemId = null) {
         currentResolution = 1;
         const resSelect = document.getElementById('grid-resolution-select');
         if (resSelect) resSelect.value = '1';
+
+        if (nameInput) nameInput.value = 'Phrase'; // default name
+        if (repeatsInput) repeatsInput.value = '1';
     }
 
     undoStack = [];
@@ -416,6 +459,12 @@ export function openGridEditor(phraseString = null, itemId = null) {
 
     // Reset mode
     currentMode = 'draw';
+
+    // Reset Scroll Position
+    const scrollArea = document.getElementById('grid-scroll-area');
+    if (scrollArea) scrollArea.scrollLeft = 0;
+    const numbersArea = document.getElementById('grid-numbers-scroll-area');
+    if (numbersArea) numbersArea.scrollLeft = 0;
     const modeDrawBtn = document.getElementById('grid-mode-draw');
     if (modeDrawBtn) modeDrawBtn.click();
 
@@ -783,9 +832,13 @@ function setupCanvasInteractions(canvas) {
         } else {
             dragAction = 'add';
             notes.push({ row, startTick: targetTick, lengthTicks: ticksPerStep });
-
-            const freq = getFrequencyForNoteName(scaleNotesSorted[row]);
-            if (freq) playTone(freq, scaleNotesSorted[row]);
+            const noteName = scaleNotesSorted[row];
+            if (noteName === 'T' || noteName === 't') {
+                playTak(0, noteName === 'T', noteName === 't');
+            } else {
+                const freq = getFrequencyForNoteName(noteName);
+                if (freq) playTone(freq, noteName);
+            }
         }
 
         isDragging = true;
@@ -898,8 +951,13 @@ function setupCanvasInteractions(canvas) {
             if (dragAction === 'add') {
                 if (existingIdx === -1) {
                     notes.push({ row, startTick: targetTick, lengthTicks: ticksPerStep });
-                    const freq = getFrequencyForNoteName(scaleNotesSorted[row]);
-                    if (freq) playTone(freq, scaleNotesSorted[row]);
+                    const noteName = scaleNotesSorted[row];
+                    if (noteName === 'T' || noteName === 't') {
+                        playTak(0, noteName === 'T', noteName === 't');
+                    } else {
+                        const freq = getFrequencyForNoteName(noteName);
+                        if (freq) playTone(freq, noteName);
+                    }
                 }
             } else if (dragAction === 'remove') {
                 if (existingIdx > -1) notes.splice(existingIdx, 1);
@@ -1159,12 +1217,14 @@ function startPlayback(isFirstLoop = true) {
         if (note.startTick < numBeats * TICKS_PER_BEAT) { // Only play notes within bounds
             const delaySec = note.startTick / ticksPerSecond;
             const noteTime = playStartTime + delaySec;
-            const freq = getFrequencyForNoteName(scaleNotesSorted[note.row]);
-            if (freq) {
-                // Determine duration in sec
-                // For a Handpan, we usually want the note to ring out (e.g., 3.0s) rather than gating it
-                // Note length visually determines rhythm, but audio should sustain naturally.
-                playTone(freq, scaleNotesSorted[note.row], 3.0, noteTime, true);
+            const noteName = scaleNotesSorted[note.row];
+            if (noteName === 'T' || noteName === 't') {
+                playTak(noteTime, noteName === 'T', noteName === 't', true); // suppressVisuals
+            } else {
+                const freq = getFrequencyForNoteName(noteName);
+                if (freq) {
+                    playTone(freq, noteName, 3.0, noteTime, true);
+                }
             }
         }
     });
@@ -1516,22 +1576,32 @@ function exportGridToPhrase() {
 
     closeGridEditor();
 
+    const nameInput = document.getElementById('grid-phrase-name');
+    const repeatsInput = document.getElementById('grid-phrase-repeats');
+    const finalName = nameInput ? (nameInput.value || 'Grid Pattern') : 'Grid Pattern';
+    const finalRepeats = repeatsInput ? (parseInt(repeatsInput.value) || 1) : 1;
+
     if (editingItem && dependencies.updateProgressionItem) {
         // Update the card directly
         dependencies.updateProgressionItem(editingItem, {
-            name: (editingItem.querySelector('.prog-label') ? editingItem.querySelector('.prog-label').textContent : 'Grid Pattern'),
+            name: finalName,
             text: phraseOutput,
-            repeats: (editingItem.dataset.repeats ? parseInt(editingItem.dataset.repeats) : 1)
+            repeats: finalRepeats
         });
+    } else if (dependencies.addToProgression) {
+        // Create new item directly
+        dependencies.addToProgression(null, null, finalName, phraseOutput, finalRepeats, false);
     } else if (dependencies.openEditor) {
-        // Create new item via standard phrase editor
-        dependencies.openEditor(null, 'Grid Pattern');
+        // Fallback
+        dependencies.openEditor(null, finalName);
         setTimeout(() => {
             const input = document.getElementById('editor-input');
+            const repInput = document.getElementById('editor-repeats');
             if (input) {
                 input.value = phraseOutput;
                 input.dispatchEvent(new Event('input'));
             }
+            if (repInput) repInput.value = finalRepeats;
         }, 50);
     }
 }
@@ -1588,6 +1658,15 @@ function importPhraseToGrid(phraseInput) {
 
         const handleNote = (noteObj) => {
             if (noteObj.type === 'rest') return;
+            if (noteObj.type === 'percussion') {
+                const targetName = noteObj.hand === 'K' || noteObj.hand === 'k' || noteObj.isGhost || noteObj.hand === 't' ? 't' : 'T';
+                const rowIdx = scaleNotesSorted.findIndex(s => s === targetName);
+                if (rowIdx > -1) {
+                    notes.push({ row: rowIdx, startTick: currentTick, lengthTicks: stepTicks });
+                }
+                return;
+            }
+
             if (!noteObj.note) {
                 console.warn("Grid Parser Warning: Could not find note property in:", noteObj);
                 return;

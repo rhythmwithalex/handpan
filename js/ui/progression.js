@@ -56,7 +56,8 @@ export function getProgressionChords() {
                     }
                 }
                 const localRepeats = item.dataset.repeats ? parseInt(item.dataset.repeats) : 1;
-                chords.push({ notes, localRepeats, element: item });
+                const isMuted = item.dataset.muted === 'true';
+                chords.push({ notes, localRepeats, element: item, muted: isMuted });
             } catch (e) {
                 console.error("Error parsing progression item:", e);
             }
@@ -75,7 +76,8 @@ export function exportProgressionData() {
         const name = labelEl ? labelEl.textContent : 'Untitled';
         const text = item.dataset.sourceText || '';
         const repeats = item.dataset.repeats ? parseInt(item.dataset.repeats) : 1;
-        data.push({ name, text, repeats });
+        const muted = item.dataset.muted === 'true';
+        data.push({ name, text, repeats, muted });
     });
 
     return data;
@@ -264,6 +266,42 @@ function renderItemDOM(item, label, notesHTML) {
     editIcon.style.alignItems = 'center';
     editIcon.style.padding = '4px'; // Make click target larger
     editIcon.style.marginLeft = '4px';
+    editIcon.title = "Edit Phrase";
+
+    const muteBtn = document.createElement('span');
+    muteBtn.className = 'mute-toggle-btn';
+    muteBtn.title = item.dataset.muted === 'true' ? "Unmute" : "Mute";
+    muteBtn.style.opacity = '0.7';
+    muteBtn.style.cursor = 'pointer';
+    muteBtn.style.display = 'inline-flex';
+    muteBtn.style.alignItems = 'center';
+    muteBtn.style.padding = '4px';
+
+    const renderMuteIcon = () => {
+        const isMuted = item.dataset.muted === 'true';
+        if (isMuted) {
+            muteBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+            muteBtn.title = "Unmute";
+            item.classList.add('muted');
+        } else {
+            muteBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+            muteBtn.title = "Mute";
+            item.classList.remove('muted');
+        }
+    };
+    // Initialize dataset if not present so first click works smoothly
+    if (!item.dataset.muted) {
+        item.dataset.muted = 'false';
+    }
+    renderMuteIcon();
+
+    muteBtn.onclick = (e) => {
+        e.stopPropagation();
+        const currentlyMuted = item.dataset.muted === 'true';
+        item.dataset.muted = currentlyMuted ? 'false' : 'true';
+        renderMuteIcon();
+        if (dependencies.onUpdate) dependencies.onUpdate();
+    };
 
     const duplicateBtn = document.createElement('span');
     duplicateBtn.title = "Duplicate";
@@ -295,6 +333,7 @@ function renderItemDOM(item, label, notesHTML) {
     };
 
     titleContainer.appendChild(titleSpan);
+    titleContainer.appendChild(muteBtn);
     titleContainer.appendChild(editIcon);
     titleContainer.appendChild(gridBtn);
     titleContainer.appendChild(duplicateBtn);
@@ -446,11 +485,16 @@ export function loadProgressionData(dataArray) {
         }
         addChordToProgression(null, parsedNotes, item.name, item.text);
 
-        // Apply repeats if needed
-        if (item.repeats > 1 && stageContainer) {
+        // Apply repeats and mute if needed
+        if (stageContainer) {
             const addedItem = stageContainer.lastElementChild;
             if (addedItem && addedItem.classList.contains('progression-item')) {
-                addedItem.dataset.repeats = item.repeats;
+                if (item.repeats > 1) {
+                    addedItem.dataset.repeats = item.repeats;
+                }
+                if (item.muted === true) {
+                    addedItem.dataset.muted = 'true';
+                }
                 updateProgressionItem(addedItem, item);
             }
         }

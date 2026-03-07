@@ -572,11 +572,11 @@ body {
     transition: left 0.5s ease;
 }
 
-.glass-card:hover::before {
+.glass-card:not(.modal-content):hover::before {
     left: 100%;
 }
 
-.glass-card:hover {
+.glass-card:not(.modal-content):hover {
     transform: translateY(-8px);
     box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.4);
     border-color: rgba(255, 255, 255, 0.2);
@@ -1170,6 +1170,8 @@ body:not(.dark-mode) .premium-btn-small {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
     margin-bottom: 15px;
     padding: 0 10px;
 }
@@ -1177,6 +1179,7 @@ body:not(.dark-mode) .premium-btn-small {
 .progression-left-group {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
 }
 
@@ -1298,6 +1301,12 @@ body:not(.dark-mode) .premium-btn-small {
 .progression-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+}
+
+.progression-item.muted {
+    opacity: 0.4;
+    filter: grayscale(1);
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .progression-item.dragging {
@@ -1458,6 +1467,37 @@ body:not(.dark-mode) .premium-btn-small {
     padding: 20px;
     box-sizing: border-box;
     transition: opacity 0.3s ease;
+}
+
+.custom-precount-cell {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--text-muted);
+    user-select: none;
+    transition: all 0.2s;
+}
+
+.custom-precount-cell.active {
+    background: rgba(var(--accent-color-rgb), 0.2);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    box-shadow: 0 0 8px rgba(var(--accent-color-rgb), 0.4);
+}
+
+.custom-precount-cell:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.custom-precount-cell.active:hover {
+    background: rgba(var(--accent-color-rgb), 0.3);
 }
 
 .welcome-card {

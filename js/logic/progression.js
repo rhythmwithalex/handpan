@@ -8,12 +8,16 @@ let currentLoopId = null;
 let currentPlayBtn = null;
 let nextNoteTime = 0.0;
 let globalTempo = 100;
+let customPrecountData = { pattern: [], subdiv: 2 };
 
 let progressionState = {
     idx: 0,
     repeat: 0,
     loop: true,
-    chords: []
+    chords: [],
+    precountBeats: 8, // This will now represent total number of clicks/cells, not necessarily full beats
+    isPrecounting: false,
+    precountEachTime: true
 };
 
 // Callbacks
@@ -33,6 +37,14 @@ export function setTempo(bpm) {
 
 export function getTempo() {
     return globalTempo;
+}
+
+export function setCustomPrecountPattern(data) {
+    if (Array.isArray(data)) {
+        customPrecountData = { pattern: data, subdiv: 2 };
+    } else {
+        customPrecountData = data || { pattern: [], subdiv: 2 };
+    }
 }
 
 export function isPlaying() {
@@ -61,6 +73,23 @@ export async function startProgression(chords, settings = {}) {
     progressionState.idx = 0;
     progressionState.repeat = 0;
     progressionState.loop = (settings.loop !== undefined) ? settings.loop : true;
+
+    // Read precount setting
+    const precountSelect = document.getElementById('precount-select');
+    const eachTimeToggle = document.getElementById('precount-each-time');
+    progressionState.precountEachTime = eachTimeToggle ? eachTimeToggle.checked : true;
+
+    if (precountSelect) {
+        if (precountSelect.value === 'custom') {
+            progressionState.precountBeats = customPrecountData.pattern.length || 8;
+        } else {
+            progressionState.precountBeats = parseInt(precountSelect.value) || 0;
+        }
+    } else {
+        progressionState.precountBeats = 8;
+    }
+    progressionState.isPrecounting = progressionState.precountBeats > 0;
+
     isProgressionPlaying = true;
 
     // Ensure Audio Context is ready
@@ -116,6 +145,55 @@ function scheduleProgressionStep() {
         return;
     }
 
+    const audioCtx = getAudioContext();
+    const beatDuration = 60 / globalTempo;
+
+    // --- Precount Phase ---
+    if (progressionState.isPrecounting && progressionState.precountBeats > 0) {
+        const precountSelect = document.getElementById('precount-select');
+        const isCustom = precountSelect && precountSelect.value === 'custom';
+
+        let clickDuration = beatDuration; // default 1/4 note
+        let totalPrecountDuration = 0;
+
+        if (isCustom) {
+            clickDuration = beatDuration / (customPrecountData.subdiv || 2);
+        }
+
+        // Schedule metronome clicks
+        for (let i = 0; i < progressionState.precountBeats; i++) {
+            const time = nextNoteTime + (i * clickDuration);
+            let isStrong = false;
+            if (isCustom) {
+                isStrong = customPrecountData.pattern[i];
+            } else {
+                // Alternate strong/weak clicks for basic precount
+                isStrong = i % 4 === 0; // Assuming 4/4 roughly
+            }
+            playTak(time, false, !isStrong); // use ghost note for weaker beats 
+        }
+
+        // Advance time
+        if (isCustom) {
+            totalPrecountDuration = progressionState.precountBeats * clickDuration;
+        } else {
+            totalPrecountDuration = progressionState.precountBeats * beatDuration;
+        }
+
+        nextNoteTime += totalPrecountDuration;
+        progressionState.isPrecounting = false;
+
+        // Visual feedback: briefly show 'Precount...' instead of highlighting a card
+        if (onStepCallback) {
+            onStepCallback(-1, null); // custom signal to clear highlights
+        }
+
+        // Schedule next check right before precount finishes
+        const delay = nextNoteTime - audioCtx.currentTime;
+        progressionTimeoutId = setTimeout(scheduleProgressionStep, Math.max(10, (delay - 0.1) * 1000));
+        return;
+    }
+
     // Wrap around or Stop
     if (progressionState.idx >= progressionState.chords.length) {
         if (!progressionState.loop) {
@@ -123,9 +201,25 @@ function scheduleProgressionStep() {
             return;
         }
         progressionState.idx = 0;
+
+        // If looping and precount is needed between loops
+        if (progressionState.precountBeats > 0 && progressionState.precountEachTime) {
+            progressionState.isPrecounting = true;
+            // Recursively call to handle the precount immediately
+            scheduleProgressionStep();
+            return;
+        }
     }
 
     const chordData = progressionState.chords[progressionState.idx];
+
+    // --- Mute Check ---
+    if (chordData.muted) {
+        progressionState.idx++;
+        // Immediately try the next one without advancing audio time
+        scheduleProgressionStep();
+        return;
+    }
 
     // Notify UI
     if (onStepCallback) {
@@ -158,7 +252,6 @@ function scheduleProgressionStep() {
     // Wait, `script.js` snippet 660-900 shows `scheduleProgressionStep` calling `runSequence`.
     // `runSequence` schedules all notes for that card and returns the total time.
 
-    const audioCtx = getAudioContext();
     const notes = currentChord.notes || []; // Fixed: use .notes from dataset
     const repeats = currentChord.localRepeats || 1;
 
@@ -220,7 +313,9 @@ function scheduleSequence(notes, startTime, repeats) {
             } else if (evt.isGroup) {
                 // Polyphonic
                 evt.notes.forEach(n => {
-                    if (n.type === 'percussion') {
+                    if (n.type === 'rest') {
+                        // ignore rests inside polyphonic groups
+                    } else if (n.type === 'percussion') {
                         const isAlt = n.hand === 'T';
                         playTak(absTime, isAlt, n.isGhost);
                     } else {

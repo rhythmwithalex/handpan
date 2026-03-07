@@ -44,6 +44,7 @@ export function initChordGrid(deps) {
     // Close on overlay click
     if (voicingModal) {
         voicingModal.addEventListener('click', (e) => {
+            if (window.getSelection().toString().length > 0) return;
             if (e.target === voicingModal) {
                 closeVoicingModal();
             }

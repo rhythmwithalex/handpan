@@ -33,6 +33,7 @@ export function initModals(onScaleSelect) {
 
     // Overlay Close
     document.getElementById('modal-overlay')?.addEventListener('click', () => {
+        if (window.getSelection().toString().length > 0) return;
         closeModal(scaleModal);
         closeModal(customModal);
         closeModal(document.getElementById('voicing-modal'));

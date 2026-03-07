@@ -1,6 +1,6 @@
 
 import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, getAudioContext, setBaseKickFrequency, setMasterVolume } from './audio/engine.js';
-import { startProgression, stopProgression, toggleProgression, setProgressionCallbacks, setTempo, isPlaying as isProgressionPlaying } from './logic/progression.js';
+import { startProgression, stopProgression, toggleProgression, setProgressionCallbacks, setTempo, isPlaying as isProgressionPlaying, setCustomPrecountPattern } from './logic/progression.js';
 import { loadLastScale, saveLastScale, getAllScales, initCustomScales } from './data/scales.js';
 import { generateChords, parseNoteName, getFrequencyForNoteName } from './logic/chords.js';
 import { parseRhythmString } from './logic/parser.js';
@@ -19,13 +19,26 @@ let handpanNotes = []; // Array of {note, octave, value}
 let visualizerMode = 'notes'; // 'notes', 'numbers', 'degrees'
 
 // Function to trigger state save
-function saveCurrentState() {
-    if (!currentScale) return;
-    const progressionData = exportProgressionData();
+const saveCurrentState = () => {
+    const precountSelect = document.getElementById('precount-select');
+    let precountConfig = { value: '0' };
+    if (precountSelect) {
+        precountConfig.value = precountSelect.value;
+        if (precountSelect.value === 'custom') {
+            try {
+                const saved = localStorage.getItem('customPrecountPattern');
+                if (saved) precountConfig.data = JSON.parse(saved);
+            } catch (e) { }
+        }
+    }
+    const eachTimeToggle = document.getElementById('precount-each-time');
+    if (eachTimeToggle) {
+        precountConfig.eachTime = eachTimeToggle.checked;
+    }
     const bpmInput = document.getElementById('bpm-slider');
     const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
-    saveStateToLocal(currentScale, progressionData, tempo);
-}
+    saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig);
+};
 
 // --- Initialization ---
 
@@ -47,6 +60,7 @@ function initApp() {
 
     // 1. Init Data
     initCustomScales();
+    initCustomPrecountUI();
 
     // 2. Init UI Components
     initModals((newScale) => loadScale(newScale));
@@ -131,7 +145,18 @@ function initApp() {
         getScale: () => currentScale,
         openEditor: (item, defaultName) => openEditor(item, defaultName, currentScale),
         updateProgressionItem: (item, data) => updateProgressionItem(item, data),
-        parseText: (text) => parseRhythmString(text, currentScale)
+        parseText: (text) => parseRhythmString(text, currentScale),
+        addToProgression: (chord, specificNotes, name, text, repeats) => {
+            const parsed = parseRhythmString(text, currentScale);
+            addChordToProgression(null, parsed, name, text);
+            const stage = document.getElementById('progression-stage');
+            const newItem = stage.lastElementChild;
+            if (newItem && repeats > 1) {
+                newItem.dataset.repeats = repeats;
+                updateProgressionItem(newItem, { name, text, repeats });
+            }
+            saveCurrentState();
+        }
     });
 
     // 3. Audio & Scheduler Setup
@@ -146,8 +171,24 @@ function initApp() {
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
             const bpmInput = document.getElementById('bpm-slider');
-            const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
-            const url = generateShareUrl(currentScale, exportProgressionData(), tempo);
+            const precountSelect = document.getElementById('precount-select');
+            let precountConfig = { value: '0' };
+            if (precountSelect) {
+                precountConfig.value = precountSelect.value;
+                if (precountSelect.value === 'custom') {
+                    try {
+                        const saved = localStorage.getItem('customPrecountPattern');
+                        if (saved) precountConfig.data = JSON.parse(saved);
+                    } catch (e) { }
+                }
+            }
+            const eachTimeToggle = document.getElementById('precount-each-time');
+            if (eachTimeToggle) {
+                precountConfig.eachTime = eachTimeToggle.checked;
+            }
+
+            const currentBpm = bpmInput ? parseInt(bpmInput.value) : 80;
+            const url = generateShareUrl(currentScale, exportProgressionData(), currentBpm, precountConfig);
             navigator.clipboard.writeText(url).then(() => {
                 const originalText = shareBtn.textContent;
                 shareBtn.textContent = '✓';
@@ -414,6 +455,7 @@ function initApp() {
         loadScale(urlData.scale, true);
         loadProgressionData(urlData.progression);
         if (urlData.tempo) updateBpmUI(urlData.tempo);
+        if (urlData.precount) applyPrecountConfig(urlData.precount);
         // Save URL data to local storage immediately so it persists on reload
         saveCurrentState();
         // Clean up URL without reloading
@@ -426,6 +468,7 @@ function initApp() {
                 loadProgressionData(localData.progression);
             }
             if (localData.tempo) updateBpmUI(localData.tempo);
+            if (localData.precount) applyPrecountConfig(localData.precount);
         } else {
             const saved = loadLastScale() || getAllScales()[0];
             loadScale(saved, true);
@@ -525,7 +568,7 @@ function setupScheduler() {
             // Step Connect
             const items = document.querySelectorAll('.progression-item');
             items.forEach(el => el.classList.remove('playing-item'));
-            if (chordData.element) {
+            if (chordData && chordData.element) {
                 chordData.element.classList.add('playing-item');
                 // chordData.element.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
@@ -596,6 +639,12 @@ function togglePlayback() {
 
         startProgression(chords);
 
+        // Auto-scroll to visualizer
+        const vizSection = document.getElementById('visualizer-section');
+        if (vizSection) {
+            vizSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         if (btn) {
             btn.textContent = 'Stop ■';
             btn.classList.add('playing');
@@ -617,6 +666,47 @@ function setupGlobalEvents() {
     document.getElementById('play-progression-btn')?.addEventListener('click', togglePlayback);
     document.getElementById('canvas-play-btn')?.addEventListener('click', togglePlayback);
 
+    const muteAllBtn = document.getElementById('mute-all-btn');
+    if (muteAllBtn) {
+        let isAllMuted = false;
+        muteAllBtn.addEventListener('click', () => {
+            isAllMuted = !isAllMuted;
+
+            // Adjust muteAllBtn icon
+            if (isAllMuted) {
+                muteAllBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+                muteAllBtn.title = "Unmute All Phrases";
+            } else {
+                muteAllBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+                muteAllBtn.title = "Mute All Phrases";
+            }
+
+            const items = document.querySelectorAll('#progression-stage .progression-item');
+            items.forEach(item => {
+                item.dataset.muted = isAllMuted ? 'true' : 'false';
+                if (isAllMuted) {
+                    item.classList.add('muted');
+                } else {
+                    item.classList.remove('muted');
+                }
+
+                const muteToggle = item.querySelector('.mute-toggle-btn');
+                if (muteToggle) {
+                    if (isAllMuted) {
+                        muteToggle.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+                        muteToggle.title = "Unmute";
+                    } else {
+                        muteToggle.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+                        muteToggle.title = "Mute";
+                    }
+                }
+            });
+
+            // Save state once after all updates
+            saveCurrentState();
+        });
+    }
+
     // Sliders
     const bpmSlider = document.getElementById('bpm-slider');
     const bpmValue = document.getElementById('bpm-value');
@@ -625,6 +715,23 @@ function setupGlobalEvents() {
             const val = parseInt(e.target.value);
             setTempo(val);
             if (bpmValue) bpmValue.textContent = val;
+        });
+    }
+    if (bpmValue && bpmSlider) {
+        bpmValue.style.cursor = 'pointer';
+        bpmValue.title = "Click to enter BPM manually";
+        bpmValue.addEventListener('click', () => {
+            const newBpm = prompt("Enter BPM (30-280):", bpmSlider.value);
+            if (newBpm !== null) {
+                let parsed = parseInt(newBpm);
+                if (!isNaN(parsed)) {
+                    if (parsed < 30) parsed = 30;
+                    if (parsed > 280) parsed = 280;
+                    bpmSlider.value = parsed;
+                    setTempo(parsed);
+                    bpmValue.textContent = parsed;
+                }
+            }
         });
     }
 
@@ -805,4 +912,200 @@ if ('serviceWorker' in navigator) {
             console.log('SW registration failed: ', registrationError);
         });
     });
+}
+
+function applyPrecountConfig(config) {
+    if (!config) return;
+    const select = document.getElementById('precount-select');
+    if (!select) return;
+
+    if (config.eachTime !== undefined) {
+        const eachTimeToggle = document.getElementById('precount-each-time');
+        if (eachTimeToggle) eachTimeToggle.checked = config.eachTime;
+    }
+
+    if (config.value === 'custom' && config.data) {
+        localStorage.setItem('customPrecountPattern', JSON.stringify(config.data));
+        setCustomPrecountPattern(config.data);
+
+        let customOpt = select.querySelector('option[value="custom"]');
+        if (!customOpt) {
+            customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            select.appendChild(customOpt);
+        }
+
+        let pLen = 8, sDiv = 2;
+        if (Array.isArray(config.data)) {
+            pLen = config.data.length;
+        } else if (config.data.pattern) {
+            pLen = config.data.pattern.length;
+            sDiv = config.data.subdiv || 2;
+        }
+
+        const formatLabel = (p, s) => {
+            if (s === 1) return `Custom (${p} beats)`;
+            const typeMap = { 2: '1/8', 3: '1/12', 4: '1/16' };
+            return `Custom (${p} ${typeMap[s] || '?'})`;
+        };
+        customOpt.textContent = formatLabel(pLen, sDiv);
+        select.value = 'custom';
+    } else {
+        select.value = config.value || '0';
+        const customOpt = select.querySelector('option[value="custom"]');
+        if (customOpt) customOpt.remove();
+    }
+}
+
+function initCustomPrecountUI() {
+    const select = document.getElementById('precount-select');
+    const openBtn = document.getElementById('open-custom-precount-btn');
+    const modal = document.getElementById('custom-precount-modal');
+    const overlay = document.getElementById('modal-overlay');
+    const lengthInput = document.getElementById('custom-precount-length');
+    const subdivSelect = document.getElementById('custom-precount-subdiv');
+    const gridContainer = document.getElementById('custom-precount-grid');
+    const saveBtn = document.getElementById('confirm-custom-precount');
+    const cancelBtn = document.getElementById('cancel-custom-precount');
+    const closeBtn = document.getElementById('close-custom-precount');
+
+    if (!select || !modal) return;
+
+    let previousValue = select.value || '0';
+    let currentPattern = [true, false, false, false, true, false, false, false]; // default 8
+    let currentSubdiv = 2; // 1/8 notes by default, aligned with Grid Editor 1/4 feel
+
+    // Load saved custom pattern if any
+    try {
+        const saved = localStorage.getItem('customPrecountPattern');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+                currentPattern = parsed; // Legacy support
+                currentSubdiv = 2;
+            } else if (parsed && parsed.pattern) {
+                currentPattern = parsed.pattern;
+                currentSubdiv = parsed.subdiv || 2;
+            }
+        }
+        setCustomPrecountPattern({ pattern: currentPattern, subdiv: currentSubdiv });
+    } catch (e) { }
+
+    const renderGrid = (len) => {
+        gridContainer.innerHTML = '';
+        // Adjust array size
+        while (currentPattern.length < len) currentPattern.push(false);
+        if (currentPattern.length > len) currentPattern.length = len;
+
+        for (let i = 0; i < len; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'custom-precount-cell' + (currentPattern[i] ? ' active' : '');
+            cell.textContent = i + 1;
+            cell.onclick = () => {
+                currentPattern[i] = !currentPattern[i];
+                cell.classList.toggle('active', currentPattern[i]);
+            };
+            gridContainer.appendChild(cell);
+        }
+    };
+
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            previousValue = select.value;
+            let customOpt = select.querySelector('option[value="custom"]');
+            if (!customOpt) {
+                customOpt = document.createElement('option');
+                customOpt.value = 'custom';
+
+                const formatLabel = (p, s) => {
+                    if (s === 1) return `Custom (${p} beats)`;
+                    const typeMap = { 2: '1/8', 3: '1/12', 4: '1/16' };
+                    return `Custom (${p} ${typeMap[s] || '?'})`;
+                };
+                customOpt.textContent = formatLabel(currentPattern.length, currentSubdiv);
+                select.appendChild(customOpt);
+            }
+            select.value = 'custom';
+
+            lengthInput.value = currentPattern.length;
+            if (subdivSelect) subdivSelect.value = currentSubdiv;
+            renderGrid(currentPattern.length);
+            overlay.style.display = 'block';
+            modal.style.display = 'block';
+        });
+    }
+
+    select.addEventListener('change', (e) => {
+        if (e.target.value !== 'custom') {
+            previousValue = e.target.value;
+            // If they pick a normal number, remove 'custom' option if it exists
+            const customOpt = select.querySelector('option[value="custom"]');
+            if (customOpt) customOpt.remove();
+        }
+    });
+
+    if (lengthInput) {
+        lengthInput.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (val < 1) val = 1;
+            if (val > 32) val = 32;
+            e.target.value = val;
+            renderGrid(val);
+        });
+    }
+
+    if (subdivSelect) {
+        subdivSelect.addEventListener('change', (e) => {
+            currentSubdiv = parseInt(e.target.value);
+        });
+    }
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
+    };
+
+    const cancel = () => {
+        // Revert select back to what it was
+        select.value = previousValue;
+        const customOpt = select.querySelector('option[value="custom"]');
+        if (customOpt && previousValue !== 'custom') customOpt.remove();
+        closeModal();
+    };
+
+    const save = () => {
+        previousValue = 'custom';
+        const saveData = { pattern: currentPattern, subdiv: currentSubdiv };
+        localStorage.setItem('customPrecountPattern', JSON.stringify(saveData));
+        setCustomPrecountPattern(saveData);
+
+        let customOpt = select.querySelector('option[value="custom"]');
+        if (!customOpt) {
+            customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            select.appendChild(customOpt);
+        }
+
+        const formatLabel = (p, s) => {
+            if (s === 1) return `Custom (${p} beats)`;
+            const typeMap = { 2: '1/8', 3: '1/12', 4: '1/16' };
+            return `Custom (${p} ${typeMap[s] || '?'})`;
+        };
+        customOpt.textContent = formatLabel(currentPattern.length, currentSubdiv);
+
+        select.value = 'custom';
+
+        closeModal();
+    };
+
+    if (cancelBtn) cancelBtn.addEventListener('click', cancel);
+    if (closeBtn) closeBtn.addEventListener('click', cancel);
+    if (saveBtn) saveBtn.addEventListener('click', save);
+
+    // Prevent modal close on overlay click? Optionally.
+    // The modals.js logic already handles clicking #modal-overlay to close all.
+    // However, if we click outside, we might want to trigger `cancel` instead of just hiding it
+    // so the select reverts.
+    // We already intercepted clicks in modals.js, but let's assume it's fine for now, 
+    // user just explicitly clicks 'Save' or 'Cancel' in this modal.
 }

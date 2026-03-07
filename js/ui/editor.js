@@ -37,6 +37,7 @@ export function initEditor(onSave) {
             infoModal.style.display = 'none';
         });
         infoModal.addEventListener('click', (e) => {
+            if (window.getSelection().toString().length > 0) return;
             if (e.target === infoModal) {
                 infoModal.style.display = 'none';
             }
@@ -182,9 +183,7 @@ export function openEditor(item, defaultName = '', currentScale = null) {
         fastInsertContainer.appendChild(createBtn('|', '|', true));
         fastInsertContainer.appendChild(createBtn('-', '-', true));
         fastInsertContainer.appendChild(createBtn('T', 'T'));
-        fastInsertContainer.appendChild(createBtn('K', 'K'));
         fastInsertContainer.appendChild(createBtn('t', 't'));
-        fastInsertContainer.appendChild(createBtn('k', 'k'));
     }
 }
 

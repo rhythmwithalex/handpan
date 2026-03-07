@@ -2,12 +2,13 @@
 
 const STORAGE_KEY = 'handpan_app_progression';
 
-export function saveStateToLocal(scale, progressionItemsData, tempo) {
+export function saveStateToLocal(scale, progressionItemsData, tempo, precount) {
     if (!scale || !progressionItemsData) return;
     const data = {
         scale: scale,
         progression: progressionItemsData,
-        tempo: tempo || 80
+        tempo: tempo || 80,
+        precount: precount
     };
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -28,12 +29,13 @@ export function loadStateFromLocal() {
     return null;
 }
 
-export function generateShareUrl(scale, progressionItemsData, tempo) {
+export function generateShareUrl(scale, progressionItemsData, tempo, precount) {
     if (!scale || !progressionItemsData) return window.location.href.split('?')[0];
 
     const data = {
         s: scale, // Use short keys to save space in URL
         t: tempo || 80, // Tempo
+        pr: precount, // Precount config
         p: progressionItemsData.map(item => ({
             n: item.name,      // name
             t: item.text,      // original text
@@ -69,13 +71,14 @@ export function decodeUrlData() {
         // Map back from short keys
         const scale = parsed.s;
         const tempo = parsed.t || 80;
+        const precount = parsed.pr;
         const progression = parsed.p ? parsed.p.map(item => ({
             name: item.n || item.name,
             text: item.t || item.text,
             repeats: item.r || item.repeats || 1
         })) : [];
 
-        return { scale, progression, tempo };
+        return { scale, progression, tempo, precount };
 
     } catch (e) {
         console.error("Error decoding URL data:", e);
