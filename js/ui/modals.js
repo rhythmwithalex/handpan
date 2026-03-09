@@ -26,7 +26,7 @@ export function initModals(onScaleSelect) {
     });
 
     // Custom Scale Modal
-    document.getElementById('btn-custom-scale')?.addEventListener('click', openCustomModal);
+    document.getElementById('btn-custom-scale')?.addEventListener('click', () => openCustomModal());
     document.getElementById('close-custom-modal')?.addEventListener('click', () => {
         closeModal(customModal);
     });
@@ -386,58 +386,61 @@ function openCustomModal(editScale = null) {
     showModal(customModal);
 
     const nameInput = document.getElementById('custom-scale-name');
-    const dingInput = document.getElementById('custom-scale-ding');
     const topInput = document.getElementById('custom-scale-top');
     const bottomInput = document.getElementById('custom-scale-bottom');
-    const idInput = document.getElementById('custom-scale-id');
 
     if (editScale) {
-        idInput.value = editScale.id;
+        customModal.dataset.editId = editScale.id;
         nameInput.value = editScale.name;
-        dingInput.value = editScale.top[0];
-        topInput.value = editScale.top.slice(1).join(' ');
+        topInput.value = editScale.top.join(' ');
 
-        // Convert bottom object to string "Note:Parent Note:Parent"
+        // Convert bottom object to string "Note (Parent) Note (Parent)"
         const bottomStr = Object.entries(editScale.bottom)
-            .map(([n, p]) => `${n}:${p}`)
+            .map(([n, p]) => `${n}(${p})`)
             .join(' ');
         bottomInput.value = bottomStr;
     } else {
-        idInput.value = '';
+        delete customModal.dataset.editId;
         nameInput.value = '';
-        dingInput.value = 'D3';
-        topInput.value = 'A3 Bb3 C4 D4 E4 F4 G4 A4';
+        topInput.value = '';
         bottomInput.value = '';
     }
 }
 
 function handleCustomSave() {
-    const idInput = document.getElementById('custom-scale-id');
     const nameInput = document.getElementById('custom-scale-name');
-    const dingInput = document.getElementById('custom-scale-ding');
     const topInput = document.getElementById('custom-scale-top');
     const bottomInput = document.getElementById('custom-scale-bottom');
 
     const name = nameInput.value.trim();
     if (!name) return alert('Name is required');
 
-    const ding = dingInput.value.trim();
-    const top = topInput.value.trim().split(/\s+/).filter(n => n);
+    const topFull = topInput.value.trim().split(/\s+/).filter(n => n);
+    if (topFull.length === 0) return alert('At least 1 top note (Ding) is required.');
 
+    // We accept both F#3(F#4) and F#3:F#4 syntax
     const bottomRaw = bottomInput.value.trim().split(/\s+/).filter(n => n);
     const bottom = {};
     bottomRaw.forEach(pair => {
-        const [n, p] = pair.split(':');
+        let n, p;
+        if (pair.includes('(')) {
+            const m = pair.match(/^([^\(]+)\(([^\)]+)\)$/);
+            if (m) { n = m[1]; p = m[2]; }
+        } else if (pair.includes(':')) {
+            const [nSplit, pSplit] = pair.split(':');
+            n = nSplit; p = pSplit;
+        }
         if (n && p) bottom[n] = p;
     });
 
-    const isEdit = !!idInput.value;
-    const id = isEdit ? idInput.value : `custom-${Date.now()}`;
+    const editId = customModal.dataset.editId;
+    const isEdit = !!editId;
+    const id = isEdit ? editId : `custom-${Date.now()}`;
 
     const scale = {
         id,
         name,
-        top: [ding, ...top],
+        top: topFull,
         bottom
     };
 
