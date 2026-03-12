@@ -79,7 +79,9 @@ export async function startProgression(chords, settings = {}) {
     const eachTimeToggle = document.getElementById('precount-each-time');
     progressionState.precountEachTime = eachTimeToggle ? eachTimeToggle.checked : true;
 
-    if (precountSelect) {
+    if (settings.skipPrecount) {
+        progressionState.precountBeats = 0;
+    } else if (precountSelect) {
         if (precountSelect.value === 'custom') {
             progressionState.precountBeats = customPrecountData.pattern.length || 8;
         } else {

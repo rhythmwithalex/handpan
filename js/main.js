@@ -40,6 +40,14 @@ const saveCurrentState = () => {
     saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig);
 };
 
+const resetPrecountUI = () => {
+    const precountSelect = document.getElementById('precount-select');
+    const eachLoopCheckbox = document.getElementById('precount-each-time');
+    if (precountSelect) precountSelect.value = "4";
+    if (eachLoopCheckbox) eachLoopCheckbox.checked = false;
+    saveCurrentState();
+};
+
 // --- Initialization ---
 
 function initApp() {
@@ -104,7 +112,8 @@ function initApp() {
         },
         getScale: () => currentScale,
         parseText: (text) => parseRhythmString(text, currentScale),
-        stopPlayback: () => stopPlayback()
+        stopPlayback: () => stopPlayback(),
+        onClear: () => resetPrecountUI()
     });
 
     initEditor((data) => {
@@ -522,6 +531,7 @@ function loadScale(scale, isInitialLoad = false) {
     // If it's the initial page load, do not clear the progression or trigger an empty save!
     if (!isInitialLoad) {
         clearProgression(true);
+        resetPrecountUI();
     } else {
         clearProgression(false); // Don't trigger a save
     }

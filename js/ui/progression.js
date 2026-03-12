@@ -469,6 +469,7 @@ export function clearProgression(triggerSave = true) {
         stageContainer.innerHTML = '<div class="placeholder-text">Click + on a card to add to progression</div>';
     }
     if (dependencies.stopPlayback) dependencies.stopPlayback();
+    if (triggerSave && dependencies.onClear) dependencies.onClear();
     if (triggerSave && dependencies.onUpdate) dependencies.onUpdate();
 }
 

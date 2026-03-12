@@ -381,7 +381,7 @@ function playSequenceStub(notes) {
     ];
 
     // Start playback
-    startProgression(tempProgression, { loop: false });
+    startProgression(tempProgression, { loop: false, skipPrecount: true });
 }
 
 function playModalSequence(notes, pillsContainer) {
