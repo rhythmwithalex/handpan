@@ -1,9 +1,10 @@
-
 import { NOTE_TO_MIDI } from '../data/constants.js';
 
 let noteClickCallback = null;
 let bodyClickCallback = null;
 let visualTimeouts = [];
+const KICK_LIMIT_PX = 70;
+const BOTTOM_NOTE_DEADZONE_PX = 50;
 
 console.log("Visualizer Module v6 Loaded");
 
@@ -39,8 +40,54 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     // Catch background taps for "Tak" (Body Hit)
     const handleSvgTap = (e) => {
-        // Only trigger if we click directly on the svg or the percussion ring, not the notes 
-        // (notes have stopPropagation)
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const dx = svgP.x - layout.cx;
+        const dy = svgP.y - layout.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 1. Strict Boundary Check: Only within rBody + KICK_LIMIT_PX
+        if (dist > layout.rBody + KICK_LIMIT_PX) return;
+
+        // 2. Deadzone check for bottom notes
+        // Normalize names: use clean versions without "D:" prefix
+        const bottomKeys = Object.keys(currentScale.bottom);
+        const topNotes = currentScale.top;
+        const topSideNotes = sortNotesByPitchLocal(topNotes.slice(1));
+        
+        const parentPositions = {};
+        const N = topSideNotes.length;
+        const stepAngle = (2 * Math.PI) / N;
+        topSideNotes.forEach((name, i) => {
+            const cleanName = name.replace(/^D:/, '');
+            const direction = (i % 2 === 1) ? 1 : -1;
+            const stepCount = Math.ceil(i / 2);
+            const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
+            parentPositions[cleanName] = {
+                x: layout.cx + layout.rNotesTop * Math.cos(angle),
+                y: layout.cy + layout.rNotesTop * Math.sin(angle)
+            };
+        });
+
+        const sortedBottom = sortNotesByPitchLocal(bottomKeys);
+        for (let i = 0; i < sortedBottom.length; i++) {
+            const note = sortedBottom[i];
+            const parent = currentScale.bottom[note].replace(/^D:/, '');
+            const parentPos = parentPositions[parent];
+            if (!parentPos) continue;
+
+            const pdx = parentPos.x - layout.cx;
+            const pdy = parentPos.y - layout.cy;
+            const pdist = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+            const bx = layout.cx + (pdx / pdist) * layout.rNotesBottom;
+            const by = layout.cy + (pdy / pdist) * layout.rNotesBottom;
+
+            const distToNote = Math.sqrt(Math.pow(svgP.x - bx, 2) + Math.pow(svgP.y - by, 2));
+            if (distToNote < BOTTOM_NOTE_DEADZONE_PX) return;
+        }
+
         if (bodyClickCallback) {
             bodyClickCallback();
         }
@@ -113,11 +160,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     body.setAttribute("cy", layout.cy);
     body.setAttribute("r", layout.rBody);
     body.classList.add("hp-body");
-    const cancelTak = (e) => {
-        // Prevent background Tak from firing when clicking inside the body
-        e.stopPropagation();
-    };
-    body.addEventListener('pointerdown', cancelTak, { passive: false });
+    // Removed separate listener for body to unify it in handleSvgTap
     body.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
     svg.appendChild(body);
 
@@ -127,6 +170,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     percRing.setAttribute("cy", layout.cy);
     percRing.setAttribute("r", layout.rRing);
     percRing.setAttribute("fill", "none");
+    percRing.style.pointerEvents = "none";
     percRing.classList.add("perc-ring");
     svg.appendChild(percRing);
 
@@ -140,6 +184,30 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     marker.setAttribute("stroke-dasharray", "4 4");
     marker.setAttribute("opacity", "0.4");
     svg.appendChild(marker);
+
+    // Kick limit boundary (Dashed line)
+    const kickLimitCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    kickLimitCircle.setAttribute("cx", layout.cx);
+    kickLimitCircle.setAttribute("cy", layout.cy);
+    kickLimitCircle.setAttribute("r", layout.rBody + KICK_LIMIT_PX);
+    kickLimitCircle.setAttribute("fill", "none");
+    kickLimitCircle.setAttribute("stroke", "rgba(128, 128, 128, 0.3)");
+    kickLimitCircle.setAttribute("stroke-dasharray", "6 6");
+    kickLimitCircle.style.pointerEvents = "none";
+    svg.appendChild(kickLimitCircle);
+
+    // "body sound" label
+    const kickLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    kickLabel.setAttribute("x", layout.cx);
+    kickLabel.setAttribute("y", layout.cy + layout.rBody + KICK_LIMIT_PX - 8);
+    kickLabel.setAttribute("text-anchor", "middle");
+    kickLabel.setAttribute("fill", "gray");
+    kickLabel.setAttribute("font-size", "10px");
+    kickLabel.setAttribute("opacity", "0.6");
+    kickLabel.style.pointerEvents = "none";
+    kickLabel.style.userSelect = "none";
+    kickLabel.textContent = "body sound";
+    svg.appendChild(kickLabel);
 
     const topNotes = currentScale.top;
     const dingName = topNotes[0];

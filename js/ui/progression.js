@@ -461,8 +461,11 @@ function renderRepeatsBadge(item, repeats) {
 
 export function clearProgression(triggerSave = true) {
     if (triggerSave) {
-        const confirmClear = window.confirm("Are you sure you want to clear the Progression Stage?");
-        if (!confirmClear) return;
+        const items = stageContainer ? stageContainer.querySelectorAll('.progression-item') : [];
+        if (items.length > 0) {
+            const confirmClear = window.confirm("Are you sure you want to clear the Progression Stage?");
+            if (!confirmClear) return;
+        }
     }
 
     if (stageContainer) {

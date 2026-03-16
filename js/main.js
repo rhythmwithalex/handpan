@@ -831,20 +831,8 @@ function setupGlobalEvents() {
             }
         });
 
-        // Click outside handpan (background/container) plays Tak
-        const container = document.querySelector('.handpan-container');
-        if (container) {
-            container.addEventListener('pointerdown', (e) => {
-                // If it's the container itself (outside SVG entirely) 
-                // OR it's the SVG element but NOT the handpan body/notes (which stopPropagation)
-                if ((e.target === container || e.target.id === 'handpan-svg')) {
-                    import('./audio/engine.js').then(module => {
-                        module.playTak(0);
-                    });
-                }
-            });
-        }
     }
+
 
     // Chord Panel Toggle
     const chordToggleBtn = document.getElementById('chord-toggle-btn');
