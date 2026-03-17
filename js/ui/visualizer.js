@@ -77,20 +77,27 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     const bottomKeys = Object.keys(currentScale.bottom);
     const sortedBottom = sortNotesByPitchLocal(bottomKeys);
     cachedBottomDeadzones = sortedBottom.map(note => {
-        if (customLayout[note]) {
-            return { x: customLayout[note].x, y: customLayout[note].y };
-        }
         const parent = currentScale.bottom[note].replace(/^D:/, '');
         const parentPos = parentPositions[parent];
-        if (!parentPos) return null;
+        
+        let x, y, rx, ry;
+        
+        if (customLayout[note]) {
+            x = customLayout[note].x;
+            y = customLayout[note].y;
+            rx = customLayout[note].rx;
+            ry = customLayout[note].ry;
+        } else if (parentPos) {
+            const pdx = parentPos.x - layout.cx;
+            const pdy = parentPos.y - layout.cy;
+            const pdist = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+            x = layout.cx + (pdx / pdist) * layout.rNotesBottom;
+            y = layout.cy + (pdy / pdist) * layout.rNotesBottom;
+        } else {
+            return null;
+        }
 
-        const pdx = parentPos.x - layout.cx;
-        const pdy = parentPos.y - layout.cy;
-        const pdist = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
-        return {
-            x: layout.cx + (pdx / pdist) * layout.rNotesBottom,
-            y: layout.cy + (pdy / pdist) * layout.rNotesBottom
-        };
+        return { x, y, rx, ry };
     }).filter(Boolean);
 
     // Catch background taps for "Tak" (Body Hit)
@@ -103,16 +110,21 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const dy = svgP.y - layout.cy;
         const distSq = dx * dx + dy * dy;
 
-        // 1. Strict Boundary Check: Only within rBody + KICK_LIMIT_PX
+        // 1. Strict Boundary Check: Band between rBody - 25 and rBody + KICK_LIMIT_PX
         const limit = layout.rBody + KICK_LIMIT_PX;
-        if (distSq > limit * limit) return;
+        const innerLimit = layout.rBody - 25;
+        if (distSq > limit * limit || distSq < innerLimit * innerLimit) return;
 
-        // 2. Deadzone check for bottom notes (using cached positions)
-        const deadzoneSq = BOTTOM_NOTE_DEADZONE_PX * BOTTOM_NOTE_DEADZONE_PX;
+        // 2. Deadzone check for bottom notes (using cached positions and sizes)
         for (let i = 0; i < cachedBottomDeadzones.length; i++) {
             const dz = cachedBottomDeadzones[i];
-            const distSqNote = Math.pow(svgP.x - dz.x, 2) + Math.pow(svgP.y - dz.y, 2);
-            if (distSqNote < deadzoneSq) return;
+            const drx = dz.rx || BOTTOM_NOTE_DEADZONE_PX;
+            const dry = dz.ry || BOTTOM_NOTE_DEADZONE_PX;
+            
+            // Elliptical distance check
+            const normX = (svgP.x - dz.x) / drx;
+            const normY = (svgP.y - dz.y) / dry;
+            if (normX * normX + normY * normY < 1) return;
         }
 
         if (bodyClickCallback) {
@@ -288,7 +300,9 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     // Render Ding (Center or Custom)
     const dingPos = customLayout[dingName] || { x: layout.cx, y: layout.cy };
     const dingLabel = getLabel(dingName, -1);
-    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, 43, true);
+    const dingRX = customLayout[dingName]?.rx || 43;
+    const dingRY = customLayout[dingName]?.ry || 43;
+    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, dingRX, dingRY, true);
     nodesGroup.appendChild(dingG);
     notePositions[dingName] = dingPos;
 
@@ -301,11 +315,13 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     topSideNotes.forEach((name, i) => {
         const isExtraDing = name.startsWith('D:');
-        let x, y;
+        let x, y, rx, ry;
         
         if (customLayout[name]) {
             x = customLayout[name].x;
             y = customLayout[name].y;
+            rx = customLayout[name].rx;
+            ry = customLayout[name].ry;
         } else {
             const direction = (i % 2 === 1) ? 1 : -1;
             const stepCount = Math.ceil(i / 2);
@@ -314,10 +330,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
             y = layout.cy + radius * Math.sin(angle);
         }
 
-        const r = (isExtraDing ? 46 : 36) * scaleFactor;
+        const baseR = (isExtraDing ? 46 : 36) * scaleFactor;
+        rx = rx || baseR;
+        ry = ry || baseR;
         const label = getLabel(name, i);
 
-        const g = createNoteG(name, label, x, y, r, isExtraDing);
+        const g = createNoteG(name, label, x, y, rx, ry, isExtraDing);
         nodesGroup.appendChild(g);
         notePositions[name] = { x, y };
     });
@@ -328,10 +346,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const parentPos = notePositions[parent];
         if (!parentPos && !customLayout[note]) return;
 
-        let x, y;
+        let x, y, rx, ry;
         if (customLayout[note]) {
             x = customLayout[note].x;
             y = customLayout[note].y;
+            rx = customLayout[note].rx;
+            ry = customLayout[note].ry;
         } else {
             const dx = parentPos.x - layout.cx;
             const dy = parentPos.y - layout.cy;
@@ -341,15 +361,18 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
             y = layout.cy + (dy / dist) * outerRadius;
         }
 
-        const r = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
+        const baseR = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
+        rx = rx || baseR;
+        ry = ry || baseR;
+        
         const label = getLabel(note, topSideNotes.length + i);
 
-        const g = createNoteG(note, label, x, y, r, note.startsWith('D:'), true);
+        const g = createNoteG(note, label, x, y, rx, ry, note.startsWith('D:'), true);
         nodesGroup.appendChild(g);
     });
 }
 
-function createNoteG(noteName, labelText, x, y, r, isDing = false, isBottom = false) {
+function createNoteG(noteName, labelText, x, y, rx, ry, isDing = false, isBottom = false) {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     const cleanName = noteName.replace(/^D:/, '');
     g.id = `note-${cleanName}`;
@@ -358,18 +381,19 @@ function createNoteG(noteName, labelText, x, y, r, isDing = false, isBottom = fa
     if (isBottom) g.classList.add("side-note");
     g.setAttribute("data-note", noteName);
 
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", x);
-    circle.setAttribute("cy", y);
-    circle.setAttribute("r", r);
-    circle.classList.add("note-area");
-    g.appendChild(circle);
+    const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    ellipse.setAttribute("cx", x);
+    ellipse.setAttribute("cy", y);
+    ellipse.setAttribute("rx", rx);
+    ellipse.setAttribute("ry", ry);
+    ellipse.classList.add("note-area");
+    g.appendChild(ellipse);
 
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("x", x);
-    text.setAttribute("y", y + (r * 0.15));
+    text.setAttribute("y", y + (ry * 0.15));
     text.setAttribute("text-anchor", "middle");
-    text.classList.add(r < 25 ? "note-label-small" : "note-label");
+    text.classList.add(ry < 25 ? "note-label-small" : "note-label");
     text.textContent = labelText;
     g.appendChild(text);
 

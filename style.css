@@ -2158,3 +2158,24 @@ body:not(.dark-mode) .premium-btn-small {
     fill: rgba(128, 128, 128, 0.02) !important;
     stroke: rgba(128, 128, 128, 0.1) !important;
 }
+
+/* Resize Handles */
+.resize-handle {
+    transition: transform 0.1s ease, r 0.1s ease;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
+}
+
+.resize-handle:hover {
+    transform: scale(1.3);
+    r: 7;
+}
+
+.hp-note.selected ellipse {
+    stroke-dasharray: 4 2;
+    animation: dashOffset 2s linear infinite;
+}
+
+@keyframes dashOffset {
+    from { stroke-dashoffset: 20; }
+    to { stroke-dashoffset: 0; }
+}
