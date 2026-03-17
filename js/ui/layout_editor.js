@@ -4,10 +4,12 @@ let dependencies = {};
 let currentLayout = {};
 let draggedElement = null;
 let resizingHandle = null;
+let rotationHandle = null;
 let selectedNote = null;
 let dragOffset = { x: 0, y: 0 };
 let scaleOnStart = null;
 let initialResizeData = null;
+let initialRotationData = null;
 
 const MIN_RADIUS = 15;
 
@@ -174,20 +176,21 @@ function renderEditorSVG() {
         renderDraggableNote(note, dPos, r, r, note.startsWith('D:'), true);
     });
 
-    // Render Resize Handles if something is selected
+    // Render Controls if something is selected
     if (selectedNote) {
         const noteData = currentLayout[selectedNote.name] || selectedNote.default;
-        renderResizeHandles(selectedNote.name, noteData.x, noteData.y, noteData.rx, noteData.ry);
+        renderControls(selectedNote.name, noteData.x, noteData.y, noteData.rx, noteData.ry, noteData.angle || 0);
     }
 }
 
 function renderDraggableNote(name, defaultPos, defaultRX, defaultRY, isDing = false, isBottom = false) {
     const svg = document.getElementById('layout-editor-svg');
-    const layoutData = currentLayout[name] || { ...defaultPos, rx: defaultRX, ry: defaultRY };
+    const layoutData = currentLayout[name] || { ...defaultPos, rx: defaultRX, ry: defaultRY, angle: 0 };
     
-    // Ensure rx/ry exist in stored data if it was only x/y before
+    // Ensure rx/ry/angle exist
     if (layoutData.rx === undefined) layoutData.rx = defaultRX;
     if (layoutData.ry === undefined) layoutData.ry = defaultRY;
+    if (layoutData.angle === undefined) layoutData.angle = 0;
 
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     const isSelected = selectedNote && selectedNote.name === name;
@@ -204,6 +207,9 @@ function renderDraggableNote(name, defaultPos, defaultRX, defaultRY, isDing = fa
     ellipse.setAttribute("cy", layoutData.y);
     ellipse.setAttribute("rx", layoutData.rx);
     ellipse.setAttribute("ry", layoutData.ry);
+    if (layoutData.angle) {
+        ellipse.setAttribute("transform", `rotate(${layoutData.angle} ${layoutData.x} ${layoutData.y})`);
+    }
     ellipse.setAttribute("fill", isDing ? "rgba(243, 156, 18, 0.4)" : "rgba(118, 75, 162, 0.3)");
     ellipse.setAttribute("stroke", isSelected ? "var(--accent-color)" : "white");
     ellipse.setAttribute("stroke-width", isSelected ? "3" : "2");
@@ -224,11 +230,13 @@ function renderDraggableNote(name, defaultPos, defaultRX, defaultRY, isDing = fa
     svg.appendChild(g);
 }
 
-function renderResizeHandles(name, x, y, rx, ry) {
+function renderControls(name, x, y, rx, ry, angle) {
     const svg = document.getElementById('layout-editor-svg');
-    const handlesG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    handlesG.id = "resize-handles";
+    const controlsG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    controlsG.id = "editor-controls";
+    controlsG.setAttribute("transform", `rotate(${angle} ${x} ${y})`);
 
+    // 1. Resize Handles
     const points = [
         { pos: [x, y - ry], type: 'n' },
         { pos: [x, y + ry], type: 's' },
@@ -251,17 +259,55 @@ function renderResizeHandles(name, x, y, rx, ry) {
         handle.setAttribute("class", "resize-handle");
         handle.setAttribute("data-handle-type", p.type);
         handle.style.cursor = p.type + "-resize";
-        handlesG.appendChild(handle);
+        controlsG.appendChild(handle);
     });
 
-    svg.appendChild(handlesG);
+    // 2. Rotation Handle
+    const stalk = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    stalk.setAttribute("x1", x);
+    stalk.setAttribute("y1", y - ry);
+    stalk.setAttribute("x2", x);
+    stalk.setAttribute("y2", y - ry - 30);
+    stalk.setAttribute("stroke", "var(--accent-color)");
+    stalk.setAttribute("stroke-width", "2");
+    controlsG.appendChild(stalk);
+
+    const rotHandle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    rotHandle.setAttribute("cx", x);
+    rotHandle.setAttribute("cy", y - ry - 30);
+    rotHandle.setAttribute("r", 8);
+    rotHandle.setAttribute("fill", "#ff4b2b");
+    rotHandle.setAttribute("stroke", "white");
+    rotHandle.setAttribute("stroke-width", "2");
+    rotHandle.setAttribute("class", "rotation-handle");
+    rotHandle.style.cursor = "alias";
+    controlsG.appendChild(rotHandle);
+
+    svg.appendChild(controlsG);
 }
 
 function onPointerDown(e) {
     const svg = document.getElementById('layout-editor-svg');
     const pt = getMousePos(svg, e);
 
-    // 1. Check for resize handle first
+    // 1. Check for rotation handle
+    const rot = e.target.closest('.rotation-handle');
+    if (rot && selectedNote) {
+        rotationHandle = rot;
+        rotationHandle.setPointerCapture(e.pointerId);
+        const noteData = currentLayout[selectedNote.name] || selectedNote.default;
+        
+        initialRotationData = {
+            centerX: noteData.x,
+            centerY: noteData.y,
+            startAngle: noteData.angle || 0,
+            startMouseAngle: Math.atan2(pt.y - noteData.y, pt.x - noteData.x) * 180 / Math.PI
+        };
+        e.stopPropagation();
+        return;
+    }
+
+    // 2. Check for resize handle
     const handle = e.target.closest('.resize-handle');
     if (handle && selectedNote) {
         resizingHandle = handle;
@@ -273,13 +319,14 @@ function onPointerDown(e) {
             startY: pt.y,
             startRX: noteData.rx,
             startRY: noteData.ry,
+            startAngle: noteData.angle || 0,
             type: handle.getAttribute('data-handle-type')
         };
         e.stopPropagation();
         return;
     }
 
-    // 2. Check for note dragging
+    // 3. Check for note dragging
     const g = e.target.closest('.draggable');
     if (g) {
         const name = g.getAttribute('data-note');
@@ -316,10 +363,27 @@ function onPointerMove(e) {
     const svg = document.getElementById('layout-editor-svg');
     const pt = getMousePos(svg, e);
 
-    if (resizingHandle && selectedNote) {
+    if (rotationHandle && selectedNote) {
+        const currentMouseAngle = Math.atan2(pt.y - initialRotationData.centerY, pt.x - initialRotationData.centerX) * 180 / Math.PI;
+        let delta = currentMouseAngle - initialRotationData.startMouseAngle;
+        
+        let newAngle = (initialRotationData.startAngle + delta) % 360;
+        
+        const noteData = currentLayout[selectedNote.name] || { ...selectedNote.default };
+        noteData.angle = Math.round(newAngle);
+        currentLayout[selectedNote.name] = noteData;
+        
+        updateControlsUI(noteData);
+    } else if (resizingHandle && selectedNote) {
         const type = initialResizeData.type;
-        const dx = pt.x - initialResizeData.startX;
-        const dy = pt.y - initialResizeData.startY;
+        const angleRad = (initialResizeData.startAngle || 0) * Math.PI / 180;
+        
+        // Transform mouse delta into local (unrotated) space
+        const dxRaw = pt.x - initialResizeData.startX;
+        const dyRaw = pt.y - initialResizeData.startY;
+        
+        const dx = dxRaw * Math.cos(-angleRad) - dyRaw * Math.sin(-angleRad);
+        const dy = dxRaw * Math.sin(-angleRad) + dyRaw * Math.cos(-angleRad);
         
         const noteData = currentLayout[selectedNote.name] || { ...selectedNote.default };
 
@@ -329,70 +393,87 @@ function onPointerMove(e) {
         if (type.includes('n')) noteData.ry = Math.max(MIN_RADIUS, initialResizeData.startRY - dy);
 
         currentLayout[selectedNote.name] = noteData;
-        
-        // Fast update without full re-render for performance
-        const g = svg.querySelector(`[data-note="${selectedNote.name}"]`);
-        if (g) {
-            const el = g.querySelector('ellipse');
-            el.setAttribute('rx', noteData.rx);
-            el.setAttribute('ry', noteData.ry);
-            // Move text if ry changed? center-based resizing keeps text at center
-            
-            // Move handles
-            updateHandlesUI(noteData.x, noteData.y, noteData.rx, noteData.ry);
-        }
+        updateControlsUI(noteData);
     } else if (draggedElement) {
         const nx = Math.round(pt.x - dragOffset.x);
         const ny = Math.round(pt.y - dragOffset.y);
 
-        const ellipse = draggedElement.querySelector('ellipse');
-        const text = draggedElement.querySelector('text');
-        
-        ellipse.setAttribute("cx", nx);
-        ellipse.setAttribute("cy", ny);
-        text.setAttribute("x", nx);
-        text.setAttribute("y", ny + 5);
-        
         const noteName = draggedElement.getAttribute('data-note');
         if (!currentLayout[noteName]) {
             currentLayout[noteName] = {
                 x: nx,
                 y: ny,
                 rx: parseFloat(draggedElement.getAttribute('data-default-rx')),
-                ry: parseFloat(draggedElement.getAttribute('data-default-ry'))
+                ry: parseFloat(draggedElement.getAttribute('data-default-ry')),
+                angle: 0
             };
         } else {
             currentLayout[noteName].x = nx;
             currentLayout[noteName].y = ny;
         }
 
-        updateHandlesUI(nx, ny, currentLayout[noteName].rx, currentLayout[noteName].ry);
+        updateControlsUI(currentLayout[noteName]);
     }
 }
 
-function updateHandlesUI(x, y, rx, ry) {
+function updateControlsUI(noteData) {
     const svg = document.getElementById('layout-editor-svg');
-    const handlesG = document.getElementById('resize-handles');
-    if (!handlesG) return;
+    const g = svg.querySelector(`[data-note="${selectedNote.name}"]`);
+    if (!g) return;
 
-    const points = [
-        { type: 'n', pos: [x, y - ry] },
-        { type: 's', pos: [x, y + ry] },
-        { type: 'w', pos: [x - rx, y] },
-        { type: 'e', pos: [x + rx, y] },
-        { type: 'nw', pos: [x - rx, y - ry] },
-        { type: 'ne', pos: [x + rx, y - ry] },
-        { type: 'sw', pos: [x - rx, y + ry] },
-        { type: 'se', pos: [x + rx, y + ry] }
-    ];
+    const ellipse = g.querySelector('ellipse');
+    const text = g.querySelector('text');
+    
+    ellipse.setAttribute('cx', noteData.x);
+    ellipse.setAttribute('cy', noteData.y);
+    ellipse.setAttribute('rx', noteData.rx);
+    ellipse.setAttribute('ry', noteData.ry);
+    ellipse.setAttribute('transform', `rotate(${noteData.angle || 0} ${noteData.x} ${noteData.y})`);
+    
+    text.setAttribute('x', noteData.x);
+    text.setAttribute('y', noteData.y + 5);
 
-    points.forEach(p => {
-        const handle = handlesG.querySelector(`[data-handle-type="${p.type}"]`);
-        if (handle) {
-            handle.setAttribute('cx', p.pos[0]);
-            handle.setAttribute('cy', p.pos[1]);
+    const controlsG = document.getElementById('editor-controls');
+    if (controlsG) {
+        controlsG.setAttribute("transform", `rotate(${noteData.angle || 0} ${noteData.x} ${noteData.y})`);
+        
+        const x = noteData.x;
+        const y = noteData.y;
+        const rx = noteData.rx;
+        const ry = noteData.ry;
+
+        const points = [
+            { type: 'n', pos: [x, y - ry] },
+            { type: 's', pos: [x, y + ry] },
+            { type: 'w', pos: [x - rx, y] },
+            { type: 'e', pos: [x + rx, y] },
+            { type: 'nw', pos: [x - rx, y - ry] },
+            { type: 'ne', pos: [x + rx, y - ry] },
+            { type: 'sw', pos: [x - rx, y + ry] },
+            { type: 'se', pos: [x + rx, y + ry] }
+        ];
+
+        points.forEach(p => {
+            const handle = controlsG.querySelector(`[data-handle-type="${p.type}"]`);
+            if (handle) {
+                handle.setAttribute('cx', p.pos[0]);
+                handle.setAttribute('cy', p.pos[1]);
+            }
+        });
+
+        const stalk = controlsG.querySelector('line');
+        const rot = controlsG.querySelector('.rotation-handle');
+        if (stalk) {
+            stalk.setAttribute('x1', x);
+            stalk.setAttribute('y1', y - ry);
+            stalk.setAttribute('x2', x);
+            stalk.setAttribute('y2', y - ry - 30);
         }
-    });
+        if (rot) {
+            rot.setAttribute('cx', x);
+            rot.setAttribute('cy', y - ry - 30);
+        }
+    }
 }
 
 function onPointerUp(e) {
@@ -400,9 +481,8 @@ function onPointerUp(e) {
         draggedElement.style.opacity = "1";
         draggedElement = null;
     }
-    if (resizingHandle) {
-        resizingHandle = null;
-    }
+    if (resizingHandle) resizingHandle = null;
+    if (rotationHandle) rotationHandle = null;
 }
 
 function getMousePos(svg, e) {

@@ -80,24 +80,26 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const parent = currentScale.bottom[note].replace(/^D:/, '');
         const parentPos = parentPositions[parent];
         
-        let x, y, rx, ry;
+        let x, y, rx, ry, angle;
         
         if (customLayout[note]) {
             x = customLayout[note].x;
             y = customLayout[note].y;
             rx = customLayout[note].rx;
             ry = customLayout[note].ry;
+            angle = customLayout[note].angle || 0;
         } else if (parentPos) {
             const pdx = parentPos.x - layout.cx;
             const pdy = parentPos.y - layout.cy;
             const pdist = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
             x = layout.cx + (pdx / pdist) * layout.rNotesBottom;
             y = layout.cy + (pdy / pdist) * layout.rNotesBottom;
+            angle = 0;
         } else {
             return null;
         }
 
-        return { x, y, rx, ry };
+        return { x, y, rx, ry, angle };
     }).filter(Boolean);
 
     // Catch background taps for "Tak" (Body Hit)
@@ -115,15 +117,26 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const innerLimit = layout.rBody - 25;
         if (distSq > limit * limit || distSq < innerLimit * innerLimit) return;
 
-        // 2. Deadzone check for bottom notes (using cached positions and sizes)
+        // 2. Deadzone check for bottom notes (using cached positions, sizes, and rotation)
         for (let i = 0; i < cachedBottomDeadzones.length; i++) {
             const dz = cachedBottomDeadzones[i];
             const drx = dz.rx || BOTTOM_NOTE_DEADZONE_PX;
             const dry = dz.ry || BOTTOM_NOTE_DEADZONE_PX;
+            const angleRad = (dz.angle || 0) * Math.PI / 180;
             
-            // Elliptical distance check
-            const normX = (svgP.x - dz.x) / drx;
-            const normY = (svgP.y - dz.y) / dry;
+            // Translate point to origin relative to ellipse center
+            const tx = svgP.x - dz.x;
+            const ty = svgP.y - dz.y;
+            
+            // Rotate point inversely to ellipse rotation
+            const cos = Math.cos(-angleRad);
+            const sin = Math.sin(-angleRad);
+            const rx = tx * cos - ty * sin;
+            const ry = tx * sin + ty * cos;
+            
+            // Standard axis-aligned elliptical distance check
+            const normX = rx / drx;
+            const normY = ry / dry;
             if (normX * normX + normY * normY < 1) return;
         }
 
@@ -302,7 +315,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     const dingLabel = getLabel(dingName, -1);
     const dingRX = customLayout[dingName]?.rx || 43;
     const dingRY = customLayout[dingName]?.ry || 43;
-    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, dingRX, dingRY, true);
+    const dingAngle = customLayout[dingName]?.angle || 0;
+    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, dingRX, dingRY, dingAngle, true);
     nodesGroup.appendChild(dingG);
     notePositions[dingName] = dingPos;
 
@@ -315,19 +329,21 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     topSideNotes.forEach((name, i) => {
         const isExtraDing = name.startsWith('D:');
-        let x, y, rx, ry;
+        let x, y, rx, ry, angle;
         
         if (customLayout[name]) {
             x = customLayout[name].x;
             y = customLayout[name].y;
             rx = customLayout[name].rx;
             ry = customLayout[name].ry;
+            angle = customLayout[name].angle || 0;
         } else {
             const direction = (i % 2 === 1) ? 1 : -1;
             const stepCount = Math.ceil(i / 2);
-            const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
-            x = layout.cx + radius * Math.cos(angle);
-            y = layout.cy + radius * Math.sin(angle);
+            const a = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
+            x = layout.cx + radius * Math.cos(a);
+            y = layout.cy + radius * Math.sin(a);
+            angle = 0;
         }
 
         const baseR = (isExtraDing ? 46 : 36) * scaleFactor;
@@ -335,7 +351,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         ry = ry || baseR;
         const label = getLabel(name, i);
 
-        const g = createNoteG(name, label, x, y, rx, ry, isExtraDing);
+        const g = createNoteG(name, label, x, y, rx, ry, angle, isExtraDing);
         nodesGroup.appendChild(g);
         notePositions[name] = { x, y };
     });
@@ -346,12 +362,13 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const parentPos = notePositions[parent];
         if (!parentPos && !customLayout[note]) return;
 
-        let x, y, rx, ry;
+        let x, y, rx, ry, angle;
         if (customLayout[note]) {
             x = customLayout[note].x;
             y = customLayout[note].y;
             rx = customLayout[note].rx;
             ry = customLayout[note].ry;
+            angle = customLayout[note].angle || 0;
         } else {
             const dx = parentPos.x - layout.cx;
             const dy = parentPos.y - layout.cy;
@@ -359,6 +376,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
             const outerRadius = layout.rNotesBottom;
             x = layout.cx + (dx / dist) * outerRadius;
             y = layout.cy + (dy / dist) * outerRadius;
+            angle = 0;
         }
 
         const baseR = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
@@ -367,12 +385,12 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         
         const label = getLabel(note, topSideNotes.length + i);
 
-        const g = createNoteG(note, label, x, y, rx, ry, note.startsWith('D:'), true);
+        const g = createNoteG(note, label, x, y, rx, ry, angle, note.startsWith('D:'), true);
         nodesGroup.appendChild(g);
     });
 }
 
-function createNoteG(noteName, labelText, x, y, rx, ry, isDing = false, isBottom = false) {
+function createNoteG(noteName, labelText, x, y, rx, ry, angle, isDing = false, isBottom = false) {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     const cleanName = noteName.replace(/^D:/, '');
     g.id = `note-${cleanName}`;
@@ -386,6 +404,9 @@ function createNoteG(noteName, labelText, x, y, rx, ry, isDing = false, isBottom
     ellipse.setAttribute("cy", y);
     ellipse.setAttribute("rx", rx);
     ellipse.setAttribute("ry", ry);
+    if (angle) {
+        ellipse.setAttribute("transform", `rotate(${angle} ${x} ${y})`);
+    }
     ellipse.classList.add("note-area");
     g.appendChild(ellipse);
 
