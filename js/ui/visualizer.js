@@ -30,6 +30,19 @@ function sortNotesByPitchLocal(noteStrings) {
     return parsed.map(p => p.original);
 }
 
+export const layout = {
+    cx: 250,
+    cy: 250,
+    rBody: 165,
+    rRing: 64,
+    rMarker: 185,
+    rNotesTop: 110,
+    rNotesBottom: 185
+};
+
+// Caches for geometry
+let cachedBottomDeadzones = [];
+
 export function renderHandpanSVG(currentScale, mode = 'notes') {
     const oldSvg = document.getElementById('handpan-svg');
     if (!oldSvg) return;
@@ -37,6 +50,48 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     // Remove old listeners to avoid duplicates on re-render by cloning
     const svg = oldSvg.cloneNode(false);
     oldSvg.parentNode.replaceChild(svg, oldSvg);
+
+    // --- Cache Geometry for Performance ---
+    const topNotes = currentScale.top;
+    const customLayout = currentScale.layout || {};
+    const topSideNotes = sortNotesByPitchLocal(topNotes.slice(1));
+    const parentPositions = {};
+    const N = topSideNotes.length;
+    const stepAngle = (2 * Math.PI) / N;
+
+    topSideNotes.forEach((name, i) => {
+        const cleanName = name.replace(/^D:/, '');
+        if (customLayout[name]) {
+            parentPositions[cleanName] = { x: customLayout[name].x, y: customLayout[name].y };
+        } else {
+            const direction = (i % 2 === 1) ? 1 : -1;
+            const stepCount = Math.ceil(i / 2);
+            const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
+            parentPositions[cleanName] = {
+                x: layout.cx + layout.rNotesTop * Math.cos(angle),
+                y: layout.cy + layout.rNotesTop * Math.sin(angle)
+            };
+        }
+    });
+
+    const bottomKeys = Object.keys(currentScale.bottom);
+    const sortedBottom = sortNotesByPitchLocal(bottomKeys);
+    cachedBottomDeadzones = sortedBottom.map(note => {
+        if (customLayout[note]) {
+            return { x: customLayout[note].x, y: customLayout[note].y };
+        }
+        const parent = currentScale.bottom[note].replace(/^D:/, '');
+        const parentPos = parentPositions[parent];
+        if (!parentPos) return null;
+
+        const pdx = parentPos.x - layout.cx;
+        const pdy = parentPos.y - layout.cy;
+        const pdist = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+        return {
+            x: layout.cx + (pdx / pdist) * layout.rNotesBottom,
+            y: layout.cy + (pdy / pdist) * layout.rNotesBottom
+        };
+    }).filter(Boolean);
 
     // Catch background taps for "Tak" (Body Hit)
     const handleSvgTap = (e) => {
@@ -46,46 +101,18 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
         const dx = svgP.x - layout.cx;
         const dy = svgP.y - layout.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const distSq = dx * dx + dy * dy;
 
         // 1. Strict Boundary Check: Only within rBody + KICK_LIMIT_PX
-        if (dist > layout.rBody + KICK_LIMIT_PX) return;
+        const limit = layout.rBody + KICK_LIMIT_PX;
+        if (distSq > limit * limit) return;
 
-        // 2. Deadzone check for bottom notes
-        // Normalize names: use clean versions without "D:" prefix
-        const bottomKeys = Object.keys(currentScale.bottom);
-        const topNotes = currentScale.top;
-        const topSideNotes = sortNotesByPitchLocal(topNotes.slice(1));
-        
-        const parentPositions = {};
-        const N = topSideNotes.length;
-        const stepAngle = (2 * Math.PI) / N;
-        topSideNotes.forEach((name, i) => {
-            const cleanName = name.replace(/^D:/, '');
-            const direction = (i % 2 === 1) ? 1 : -1;
-            const stepCount = Math.ceil(i / 2);
-            const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
-            parentPositions[cleanName] = {
-                x: layout.cx + layout.rNotesTop * Math.cos(angle),
-                y: layout.cy + layout.rNotesTop * Math.sin(angle)
-            };
-        });
-
-        const sortedBottom = sortNotesByPitchLocal(bottomKeys);
-        for (let i = 0; i < sortedBottom.length; i++) {
-            const note = sortedBottom[i];
-            const parent = currentScale.bottom[note].replace(/^D:/, '');
-            const parentPos = parentPositions[parent];
-            if (!parentPos) continue;
-
-            const pdx = parentPos.x - layout.cx;
-            const pdy = parentPos.y - layout.cy;
-            const pdist = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
-            const bx = layout.cx + (pdx / pdist) * layout.rNotesBottom;
-            const by = layout.cy + (pdy / pdist) * layout.rNotesBottom;
-
-            const distToNote = Math.sqrt(Math.pow(svgP.x - bx, 2) + Math.pow(svgP.y - by, 2));
-            if (distToNote < BOTTOM_NOTE_DEADZONE_PX) return;
+        // 2. Deadzone check for bottom notes (using cached positions)
+        const deadzoneSq = BOTTOM_NOTE_DEADZONE_PX * BOTTOM_NOTE_DEADZONE_PX;
+        for (let i = 0; i < cachedBottomDeadzones.length; i++) {
+            const dz = cachedBottomDeadzones[i];
+            const distSqNote = Math.pow(svgP.x - dz.x, 2) + Math.pow(svgP.y - dz.y, 2);
+            if (distSqNote < deadzoneSq) return;
         }
 
         if (bodyClickCallback) {
@@ -144,15 +171,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     svg.appendChild(defs);
 
-    const layout = {
-        cx: 250,
-        cy: 250,
-        rBody: 165,
-        rRing: 64,
-        rMarker: 185,
-        rNotesTop: 110,
-        rNotesBottom: 185
-    };
+
 
     // Main Body
     const body = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -164,15 +183,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     body.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
     svg.appendChild(body);
 
-    // Percussion Visualizer Ring (Dotted/Dashed, hidden by default)
-    const percRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    percRing.setAttribute("cx", layout.cx);
-    percRing.setAttribute("cy", layout.cy);
-    percRing.setAttribute("r", layout.rRing);
-    percRing.setAttribute("fill", "none");
-    percRing.style.pointerEvents = "none";
-    percRing.classList.add("perc-ring");
-    svg.appendChild(percRing);
+    // Percussion Visualizer Ring removed as it stayed centered regardless of Ding movements
+    // We now use the Kick limit boundary for feedback
 
     // Bottom Side Notes Marker (Dashed line)
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -185,15 +197,16 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     marker.setAttribute("opacity", "0.4");
     svg.appendChild(marker);
 
-    // Kick limit boundary (Dashed line)
+    // Kick limit boundary (Dashed line) - now also used for visual feedback
     const kickLimitCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     kickLimitCircle.setAttribute("cx", layout.cx);
     kickLimitCircle.setAttribute("cy", layout.cy);
     kickLimitCircle.setAttribute("r", layout.rBody + KICK_LIMIT_PX);
-    kickLimitCircle.setAttribute("fill", "none");
+    kickLimitCircle.setAttribute("fill", "transparent");
     kickLimitCircle.setAttribute("stroke", "rgba(128, 128, 128, 0.3)");
     kickLimitCircle.setAttribute("stroke-dasharray", "6 6");
     kickLimitCircle.style.pointerEvents = "none";
+    kickLimitCircle.classList.add("kick-boundary");
     svg.appendChild(kickLimitCircle);
 
     // "body sound" label
@@ -209,13 +222,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     kickLabel.textContent = "body sound";
     svg.appendChild(kickLabel);
 
-    const topNotes = currentScale.top;
     const dingName = topNotes[0];
-
-    // Sort Side Notes
-    const topSideNotes = sortNotesByPitchLocal(topNotes.slice(1));
-    const bottomKeys = Object.keys(currentScale.bottom);
-    const sortedBottom = sortNotesByPitchLocal(bottomKeys);
 
     const nodesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     svg.appendChild(nodesGroup);
@@ -278,16 +285,15 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         return noteStr.replace(/^D:/, '');
     };
 
-    // Render Ding (Center)
+    // Render Ding (Center or Custom)
+    const dingPos = customLayout[dingName] || { x: layout.cx, y: layout.cy };
     const dingLabel = getLabel(dingName, -1);
-    const dingG = createNoteG(dingName, dingLabel, layout.cx, layout.cy, 43, true);
+    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, 43, true);
     nodesGroup.appendChild(dingG);
-    notePositions[dingName] = { x: layout.cx, y: layout.cy };
+    notePositions[dingName] = dingPos;
 
     // Render Top Side Notes
     const radius = layout.rNotesTop;
-    const N = topSideNotes.length;
-    const stepAngle = (2 * Math.PI) / N;
 
     // Calculate dynamic scaling factor to prevent overlapping if N is large
     const maxAllowedTopR = N > 1 ? (radius * Math.sin(Math.PI / N)) * 0.85 : 50;
@@ -295,14 +301,20 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
     topSideNotes.forEach((name, i) => {
         const isExtraDing = name.startsWith('D:');
-        const direction = (i % 2 === 1) ? 1 : -1;
-        const stepCount = Math.ceil(i / 2);
-        const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
+        let x, y;
+        
+        if (customLayout[name]) {
+            x = customLayout[name].x;
+            y = customLayout[name].y;
+        } else {
+            const direction = (i % 2 === 1) ? 1 : -1;
+            const stepCount = Math.ceil(i / 2);
+            const angle = (Math.PI / 2) + (i === 0 ? 0 : direction * stepCount * stepAngle);
+            x = layout.cx + radius * Math.cos(angle);
+            y = layout.cy + radius * Math.sin(angle);
+        }
 
-        const x = layout.cx + radius * Math.cos(angle);
-        const y = layout.cy + radius * Math.sin(angle);
         const r = (isExtraDing ? 46 : 36) * scaleFactor;
-
         const label = getLabel(name, i);
 
         const g = createNoteG(name, label, x, y, r, isExtraDing);
@@ -314,16 +326,22 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     sortedBottom.forEach((note, i) => {
         const parent = currentScale.bottom[note];
         const parentPos = notePositions[parent];
-        if (!parentPos) return;
+        if (!parentPos && !customLayout[note]) return;
 
-        const dx = parentPos.x - layout.cx;
-        const dy = parentPos.y - layout.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const outerRadius = layout.rNotesBottom;
-        const x = layout.cx + (dx / dist) * outerRadius;
-        const y = layout.cy + (dy / dist) * outerRadius;
+        let x, y;
+        if (customLayout[note]) {
+            x = customLayout[note].x;
+            y = customLayout[note].y;
+        } else {
+            const dx = parentPos.x - layout.cx;
+            const dy = parentPos.y - layout.cy;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const outerRadius = layout.rNotesBottom;
+            x = layout.cx + (dx / dist) * outerRadius;
+            y = layout.cy + (dy / dist) * outerRadius;
+        }
+
         const r = (note.startsWith('D:') ? 36 : 27) * scaleFactor;
-
         const label = getLabel(note, topSideNotes.length + i);
 
         const g = createNoteG(note, label, x, y, r, note.startsWith('D:'), true);
@@ -396,19 +414,19 @@ export function highlightNote(noteName, delaySeconds = 0) {
 }
 
 export function highlightBody(delaySeconds = 0, isGhost = false) {
-    const ring = document.querySelector('.perc-ring');
-    if (!ring) return;
+    const boundary = document.querySelector('.kick-boundary');
+    if (!boundary) return;
 
     const trigger = () => {
         if (isGhost) {
-            ring.classList.add('ghost-ring');
+            boundary.classList.add('ghost-flash');
         } else {
-            ring.classList.remove('ghost-ring');
+            boundary.classList.remove('ghost-flash');
         }
-        ring.classList.add('flash');
+        boundary.classList.add('boundary-flash');
         const offTimeout = setTimeout(() => {
-            ring.classList.remove('flash');
-            ring.classList.remove('ghost-ring');
+            boundary.classList.remove('boundary-flash');
+            boundary.classList.remove('ghost-flash');
             visualTimeouts = visualTimeouts.filter(id => id !== offTimeout);
         }, 100);
         visualTimeouts.push(offTimeout);

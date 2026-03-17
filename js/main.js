@@ -4,13 +4,14 @@ import { startProgression, stopProgression, toggleProgression, setProgressionCal
 import { loadLastScale, saveLastScale, getAllScales, initCustomScales } from './data/scales.js';
 import { generateChords, parseNoteName, getFrequencyForNoteName } from './logic/chords.js';
 import { parseRhythmString } from './logic/parser.js';
-import { initInteraction, renderHandpanSVG, highlightNote, highlightBody, resetVisuals } from './ui/visualizer.js?v=7';
+import { initInteraction, renderHandpanSVG, highlightNote, highlightBody, resetVisuals } from './ui/visualizer.js';
 import { initModals } from './ui/modals.js';
-import { initChordGrid, renderChordGrid, toggleChordSort } from './ui/chord_grid.js?v=7';
+import { initChordGrid, renderChordGrid, toggleChordSort } from './ui/chord_grid.js';
 import { initProgressionUI, addChordToProgression, updateProgressionItem, getProgressionChords, clearProgression, exportProgressionData, loadProgressionData } from './ui/progression.js';
 import { initEditor, openEditor } from './ui/editor.js';
 import { initInspirations } from './ui/inspirations.js';
 import { initGridEditor, openGridEditor } from './ui/grid_editor.js';
+import { initLayoutEditor } from './ui/layout_editor.js';
 import { saveStateToLocal, loadStateFromLocal, generateShareUrl, decodeUrlData } from './data/storage.js';
 
 // Application State
@@ -716,6 +717,11 @@ function setupGlobalEvents() {
             saveCurrentState();
         });
     }
+
+    initLayoutEditor({
+        getCurrentScale: () => currentScale,
+        saveCurrentState: () => saveCurrentState()
+    });
 
     // Sliders
     const bpmSlider = document.getElementById('bpm-slider');

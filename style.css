@@ -2099,3 +2099,62 @@ body:not(.dark-mode) .premium-btn-small {
         transform: translateY(0);
     }
 }
+
+/* Layout Editor Styles */
+#layout-editor-modal .modal-content {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+}
+
+.hp-note.draggable {
+    transition: transform 0.1s ease, opacity 0.2s ease;
+    cursor: grab !important;
+}
+
+.hp-note.draggable:active {
+    cursor: grabbing !important;
+}
+
+.hp-note.draggable.dragging {
+    opacity: 0.7;
+    filter: brightness(1.2);
+}
+
+#layout-editor-svg {
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    border: 1px solid var(--glass-border);
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Boundary Flash */
+.kick-boundary {
+    transition: fill 0.1s ease, stroke 0.1s ease;
+}
+
+.boundary-flash {
+    fill: rgba(128, 128, 128, 0.05) !important;
+    stroke: rgba(128, 128, 128, 0.3) !important;
+}
+
+.boundary-flash.ghost-flash {
+    fill: rgba(128, 128, 128, 0.02) !important;
+    stroke: rgba(128, 128, 128, 0.1) !important;
+}
