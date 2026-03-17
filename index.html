@@ -225,6 +225,11 @@
                                 <input type="checkbox" id="precount-each-time" checked
                                     style="accent-color: var(--accent-light);"> Each loop
                             </label>
+                            <label title="Loop playback of the entire progression"
+                                style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; margin-left: 8px; cursor: pointer; padding-left: 8px; border-left: 1px solid rgba(0,0,0,0.1);">
+                                <input type="checkbox" id="playback-loop" checked
+                                    style="accent-color: var(--accent-light);"> Loop
+                            </label>
                         </div>
                     </div>
                     <input type="number" id="repeat-count" value="2" style="display: none;">
@@ -746,23 +751,51 @@
         <button id="pwa-reload-btn" class="premium-btn" style="padding: 5px 15px; font-size: 0.9rem;">Update</button>
     </div>
     <!-- Layout Editor Modal -->
-    <div id="layout-editor-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content glass-card" style="max-width: 800px; width: 95vw; height: auto; max-height: 95vh; display: flex; flex-direction: column; overflow: hidden; padding: 20px;">
-            <div class="modal-header" style="flex-shrink: 0; padding-bottom: 10px;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0;">Edit Layout</h2>
-                <button id="layout-editor-close" class="close-btn">&times;</button>
+    <div id="layout-editor-modal" class="editor-fullscreen-overlay" style="display: none;">
+        <div class="editor-header">
+            <h2 class="editor-title">Layout Designer</h2>
+            <div class="editor-actions">
+                <button id="layout-editor-reset" class="secondary-btn">Reset</button>
+                <button id="layout-editor-save" class="premium-btn">Save & Close</button>
+                <button id="layout-editor-close" class="close-btn" title="Cancel changes">&times;</button>
             </div>
-            <div class="modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; min-height: 400px; touch-action: none;">
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px; flex-shrink: 0;">Drag notes to reposition. These changes will be saved for the current scale.</p>
-                <!-- Large SVG for editing -->
-                <div id="layout-editor-canvas-container" style="width: 100%; height: 100%; max-width: 500px; max-height: 500px; position: relative;">
-                    <svg id="layout-editor-svg" viewBox="0 0 500 500" style="width: 100%; height: 100%; overflow: visible; background: rgba(0,0,0,0.02); border-radius: 50%; box-shadow: inset 0 0 20px rgba(0,0,0,0.1);"></svg>
+        </div>
+        
+        <div class="editor-content-wrapper">
+            <div id="layout-editor-canvas-container" class="editor-main-canvas">
+                <svg id="layout-editor-svg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet"></svg>
+                <button id="btn-fab-add" class="fab-btn" title="Add New Note">+</button>
+            </div>
+
+            <aside id="editor-sidebar" class="editor-sidebar glass-card">
+                <div class="sidebar-section">
+                    <h3 class="section-title">Properties</h3>
+                    <div id="properties-panel" class="properties-grid">
+                        <p class="empty-selection-msg">Select a note to edit its properties</p>
+                        <!-- Dynamic content for X, Y, RX, RY, Angle will be injected here -->
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer" style="flex-shrink: 0; padding-top: 20px; display: flex; gap: 10px; justify-content: center;">
-                <button id="layout-editor-reset" class="secondary-btn">Reset to Default</button>
-                <button id="layout-editor-save" class="premium-btn">Save Layout</button>
-            </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">Add Note</h3>
+                    <div class="add-note-form">
+                        <input type="text" id="new-note-name" placeholder="Name (e.g. G4)" class="premium-text-input">
+                        <select id="new-note-type" class="premium-select">
+                            <option value="note">Regular Note</option>
+                            <option value="ding">Ding</option>
+                        </select>
+                        <select id="new-note-sphere" class="premium-select">
+                            <option value="top">Top Shell</option>
+                            <option value="bottom">Bottom Shell</option>
+                        </select>
+                        <button id="btn-add-note-exec" class="premium-btn" style="margin-top: 10px; width: 100%;">Add to Layout</button>
+                    </div>
+                </div>
+                
+                <div class="sidebar-instruction">
+                    <p>Tip: Drag handles on the note to resize/rotate, or use the property draggers for precision.</p>
+                </div>
+            </aside>
         </div>
     </div>
 

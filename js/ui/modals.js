@@ -6,6 +6,7 @@ import {
     deleteCustomScale,
     initCustomScales
 } from '../data/scales.js';
+import { openLayoutEditor } from './layout_editor.js';
 
 let onScaleSelectCallback = null;
 
@@ -451,4 +452,11 @@ function handleCustomSave() {
     // Or nicely ask.
     // For now, just re-select it to update UI
     if (onScaleSelectCallback) onScaleSelectCallback(scale);
+
+    // Hybrid Workflow: Automatically open Layout Editor after creation
+    if (!isEdit) {
+        setTimeout(() => {
+            openLayoutEditor(scale);
+        }, 500); 
+    }
 }

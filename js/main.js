@@ -1,7 +1,7 @@
 
 import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, getAudioContext, setBaseKickFrequency, setMasterVolume } from './audio/engine.js';
 import { startProgression, stopProgression, toggleProgression, setProgressionCallbacks, setTempo, isPlaying as isProgressionPlaying, setCustomPrecountPattern } from './logic/progression.js';
-import { loadLastScale, saveLastScale, getAllScales, initCustomScales } from './data/scales.js';
+import { loadLastScale, saveLastScale, getAllScales, initCustomScales, saveCustomScale } from './data/scales.js';
 import { generateChords, parseNoteName, getFrequencyForNoteName } from './logic/chords.js';
 import { parseRhythmString } from './logic/parser.js';
 import { initInteraction, renderHandpanSVG, highlightNote, highlightBody, resetVisuals } from './ui/visualizer.js';
@@ -36,6 +36,10 @@ const saveCurrentState = () => {
     if (eachTimeToggle) {
         precountConfig.eachTime = eachTimeToggle.checked;
     }
+    const loopToggle = document.getElementById('playback-loop');
+    if (loopToggle) {
+        precountConfig.loop = loopToggle.checked;
+    }
     const bpmInput = document.getElementById('bpm-slider');
     const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
     saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig);
@@ -44,8 +48,10 @@ const saveCurrentState = () => {
 const resetPrecountUI = () => {
     const precountSelect = document.getElementById('precount-select');
     const eachLoopCheckbox = document.getElementById('precount-each-time');
-    if (precountSelect) precountSelect.value = "4";
+    const loopToggle = document.getElementById('playback-loop');
+    if (precountSelect) precountSelect.value = "0";
     if (eachLoopCheckbox) eachLoopCheckbox.checked = false;
+    if (loopToggle) loopToggle.checked = true;
     saveCurrentState();
 };
 
@@ -195,6 +201,10 @@ function initApp() {
             const eachTimeToggle = document.getElementById('precount-each-time');
             if (eachTimeToggle) {
                 precountConfig.eachTime = eachTimeToggle.checked;
+            }
+            const loopToggle = document.getElementById('playback-loop');
+            if (loopToggle) {
+                precountConfig.loop = loopToggle.checked;
             }
 
             const currentBpm = bpmInput ? parseInt(bpmInput.value) : 80;
@@ -720,7 +730,8 @@ function setupGlobalEvents() {
 
     initLayoutEditor({
         getCurrentScale: () => currentScale,
-        saveCurrentState: () => saveCurrentState()
+        saveCurrentState: () => saveCurrentState(),
+        saveCustomScale: (id, data) => saveCustomScale(id, data)
     });
 
     // Sliders
@@ -926,6 +937,11 @@ function applyPrecountConfig(config) {
     if (config.eachTime !== undefined) {
         const eachTimeToggle = document.getElementById('precount-each-time');
         if (eachTimeToggle) eachTimeToggle.checked = config.eachTime;
+    }
+
+    if (config.loop !== undefined) {
+        const loopToggle = document.getElementById('playback-loop');
+        if (loopToggle) loopToggle.checked = config.loop;
     }
 
     if (config.value === 'custom' && config.data) {
