@@ -403,6 +403,8 @@ body {
     cursor: pointer;
     touch-action: none !important;
     /* Crucial for immediate tap registration */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .hp-note .note-area,
@@ -434,8 +436,13 @@ body {
 
     .hp-note:hover .note-area,
     .hp-note:hover .note-area-small {
-        fill: rgba(255, 255, 255, 0.5);
+        fill: rgba(255, 255, 255, 0.82); /* Slightly brighter to ensure contrast with dark text */
         stroke: var(--accent-color);
+    }
+
+    .hp-note:hover .note-label,
+    .hp-note:hover .note-label-small {
+        fill: #000; /* Dark text on light hover background */
     }
 }
 
@@ -946,10 +953,13 @@ body:not(.dark-mode) .premium-btn-small {
     z-index: 1000;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    padding: 20px 0;
+    overflow-y: auto;
 }
 
 .modal-content {
+    margin: auto; /* Centers when content < viewport, aligns to top when content > viewport */
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(15px);
@@ -2447,7 +2457,47 @@ body:not(.dark-mode) .premium-btn-small {
     animation: dashOffset 2s linear infinite;
 }
 
+/* Choice Modal & Clone Mode Styling */
+.modal-open {
+    overflow: hidden !important;
+    height: 100vh;
+}
+
+.choice-container {
+    padding: 12px 12px 40px 12px; /* Extra bottom padding for shadows */
+    display: flex;
+    flex-direction: column;
+}
+
+.choice-container button {
+    text-align: left !important;
+    padding: 15px 20px !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+    margin: 10px 0 !important;
+}
+
+.clone-mode-info {
+    background: rgba(67, 233, 123, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px dashed var(--accent-color);
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--accent-light);
+}
+
+.dark-mode .clone-mode-info {
+    background: rgba(67, 233, 123, 0.05);
+}
+
 @keyframes dashOffset {
     from { stroke-dashoffset: 20; }
     to { stroke-dashoffset: 0; }
+}
+
+#handpan-svg, #layout-editor-svg {
+    user-select: none;
+    -webkit-user-select: none;
 }

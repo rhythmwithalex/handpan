@@ -274,28 +274,7 @@ export function initGridEditor(deps) {
     if (ghBtn) {
         ghBtn.addEventListener('click', () => {
             isGuitarHeroMode = !isGuitarHeroMode;
-            ghBtn.style.background = isGuitarHeroMode ? 'rgba(243, 156, 18, 0.2)' : 'rgba(255,255,255,0.1)';
-            ghBtn.style.border = isGuitarHeroMode ? '1px solid #f39c12' : '';
-            if (isPlaying) {
-                if (!isGuitarHeroMode) {
-                    const container = document.getElementById('grid-labels-container');
-                    if (container) container.style.display = 'block';
-
-                    // Restore UI
-                    document.getElementById('grid-editor-header').style.display = 'flex';
-                    document.getElementById('grid-toolbar-1').style.display = 'flex';
-                    document.getElementById('grid-toolbar-2').style.display = 'flex';
-                    document.getElementById('grid-gh-stop-overlay').style.display = 'none';
-
-                    renderCanvas();
-                } else {
-                    // Hide UI for fullscreen
-                    document.getElementById('grid-editor-header').style.display = 'none';
-                    document.getElementById('grid-toolbar-1').style.display = 'none';
-                    document.getElementById('grid-toolbar-2').style.display = 'none';
-                    document.getElementById('grid-gh-stop-overlay').style.display = 'flex';
-                }
-            }
+            updateGuitarHeroUI(isGuitarHeroMode);
         });
     }
 
@@ -459,6 +438,8 @@ export function openGridEditor(phraseString = null, itemId = null) {
 
     // Reset mode
     currentMode = 'draw';
+    isGuitarHeroMode = false;
+    updateGuitarHeroUI(false);
 
     // Reset Scroll Position
     const scrollArea = document.getElementById('grid-scroll-area');
@@ -480,6 +461,7 @@ export function openGridEditor(phraseString = null, itemId = null) {
 
     updateLengthDisplay();
     document.getElementById('grid-editor-modal').style.display = 'flex';
+    document.body.classList.add('modal-open');
 
     // Calculate optimal zoom to fit all notes vertically now that modal is visible
     const scrollContainer = document.getElementById('grid-scroll-area');
@@ -495,9 +477,107 @@ export function openGridEditor(phraseString = null, itemId = null) {
     renderCanvas();
 }
 
-function closeGridEditor() {
+export function closeGridEditor() {
     document.getElementById('grid-editor-modal').style.display = 'none';
+    document.body.classList.remove('modal-open');
     if (isPlaying) togglePlay();
+    updateGuitarHeroUI(false); // Ensure return to normal mode next time
+}
+
+// Consolidate UI changes for Guitar Hero mode
+function updateGuitarHeroUI(active) {
+    const ghBtn = document.getElementById('grid-gh-btn');
+    if (ghBtn) {
+        ghBtn.style.background = active ? 'rgba(243, 156, 18, 0.2)' : 'rgba(255,255,255,0.1)';
+        ghBtn.style.border = active ? '1px solid #f39c12' : 'none';
+    }
+
+    const isGH = active && isPlaying;
+    
+    // Elements to hide/show
+    const elementsToToggle = [
+        'grid-editor-header',
+        'grid-toolbar-1',
+        'grid-toolbar-2',
+        'grid-editor-footer',
+        'grid-numbers-header'
+    ];
+
+    elementsToToggle.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isGH ? 'none' : (id === 'grid-editor-footer' ? 'flex' : (id.includes('toolbar') ? 'flex' : 'flex'));
+    });
+
+    const labelsContainer = document.getElementById('grid-labels-container');
+    const labelsWrapper = document.getElementById('grid-labels-wrapper');
+    if (labelsContainer) labelsContainer.style.display = isGH ? 'none' : 'block';
+    if (labelsWrapper) labelsWrapper.style.display = isGH ? 'none' : 'block';
+
+    const stopOverlay = document.getElementById('grid-gh-stop-overlay');
+    if (stopOverlay) {
+        stopOverlay.style.display = isGH ? 'flex' : 'none';
+        if (isGH) {
+            stopOverlay.style.setProperty('position', 'absolute', 'important');
+            stopOverlay.style.setProperty('top', '20px', 'important');
+            stopOverlay.style.setProperty('right', '20px', 'important');
+            stopOverlay.style.setProperty('margin', '0', 'important');
+            stopOverlay.style.setProperty('z-index', '100', 'important');
+        } else {
+            stopOverlay.style.position = '';
+            stopOverlay.style.top = '';
+            stopOverlay.style.right = '';
+            stopOverlay.style.margin = '';
+            stopOverlay.style.zIndex = '';
+        }
+    }
+
+    // Handle Modal Sizing
+    const modal = document.querySelector('#grid-editor-modal .modal-content');
+    const modalBody = document.querySelector('#grid-editor-modal .modal-body');
+    const overlay = document.getElementById('grid-editor-modal');
+
+    if (isGH) {
+        if (overlay) overlay.style.setProperty('padding', '0px', 'important');
+        if (modal) {
+            modal.style.setProperty('max-width', '100vw', 'important');
+            modal.style.setProperty('max-height', '100vh', 'important');
+            modal.style.setProperty('height', '100vh', 'important');
+            modal.style.setProperty('width', '100vw', 'important');
+            modal.style.setProperty('margin', '0px', 'important');
+            modal.style.setProperty('padding', '20px 0 0 0', 'important');
+            modal.style.setProperty('border-radius', '0px', 'important');
+            modal.style.setProperty('border', 'none', 'important');
+        }
+        if (modalBody) {
+            modalBody.style.setProperty('max-height', 'none', 'important');
+            modalBody.style.setProperty('border-radius', '0px', 'important');
+            modalBody.style.setProperty('border', 'none', 'important');
+            modalBody.style.setProperty('height', '100%', 'important');
+            modalBody.style.setProperty('flex', '1', 'important');
+        }
+    } else {
+        if (overlay) overlay.style.padding = '';
+        if (modal) {
+            modal.style.width = '650px';
+            modal.style.maxWidth = '95vw';
+            modal.style.maxHeight = '90vh';
+            modal.style.height = '';
+            modal.style.margin = '';
+            modal.style.padding = '25px';
+            modal.style.borderRadius = '16px';
+            modal.style.border = '';
+        }
+        if (modalBody) {
+            modalBody.style.maxHeight = 'calc(90vh - 200px)'; // Leave room for header/footer
+            modalBody.style.borderRadius = '8px';
+            modalBody.style.border = '';
+            modalBody.style.height = '';
+            modalBody.style.overflowY = 'auto'; // Ensure the scroll area within body works
+            modalBody.style.flex = '1';
+        }
+    }
+
+    renderCanvas();
 }
 
 function updateLengthDisplay() {
@@ -523,6 +603,7 @@ function duplicateGrid() {
 
 // Canvas Rendering
 function renderCanvas(currentTick) {
+    if (isGuitarHeroMode && isPlaying) return;
     const canvas = document.getElementById('grid-canvas');
     const container = document.getElementById('grid-labels-container');
     const modeDeleteBtn = document.getElementById('grid-mode-delete');
@@ -1050,65 +1131,9 @@ function togglePlay() {
     isPlaying = !isPlaying;
     if (isPlaying) {
         if (btn) btn.textContent = 'Stop ⏹';
-        if (isGuitarHeroMode) {
-            document.getElementById('grid-editor-header').style.display = 'none';
-            document.getElementById('grid-toolbar-1').style.display = 'none';
-            document.getElementById('grid-toolbar-2').style.display = 'none';
-            document.getElementById('grid-editor-footer').style.display = 'none';
-            document.getElementById('grid-numbers-header').style.display = 'none';
-            document.getElementById('grid-gh-stop-overlay').style.display = 'flex';
-
-            const overlay = document.getElementById('grid-editor-modal');
-            if (overlay) {
-                overlay.dataset.origPadding = overlay.style.padding;
-                overlay.style.setProperty('padding', '0px', 'important');
-            }
-
-            // Expand modal to true absolute fullscreen
-            const modal = document.querySelector('#grid-editor-modal .modal-content');
-            if (modal) {
-                modal.dataset.origCssText = modal.style.cssText;
-
-                modal.style.setProperty('max-width', '100vw', 'important');
-                modal.style.setProperty('max-height', '100vh', 'important');
-                modal.style.setProperty('height', '100vh', 'important');
-                modal.style.setProperty('width', '100vw', 'important');
-                modal.style.setProperty('margin', '0px', 'important');
-                // The user asked to restore a small margin above the Stop button.
-                // If we set padding: 10px, it works, but let's do padding-top: 20px so the Stop button isn't right on the edge
-                modal.style.setProperty('padding', '20px 0 0 0', 'important');
-                modal.style.setProperty('border-radius', '0px', 'important');
-                modal.style.setProperty('border', 'none', 'important');
-            }
-
-            // Override modal-body's 60vh max-height from style.css
-            const modalBody = document.querySelector('#grid-editor-modal .modal-body');
-            if (modalBody) {
-                modalBody.dataset.origMaxHeight = modalBody.style.maxHeight;
-                modalBody.dataset.origBorderRadius = modalBody.style.borderRadius;
-                modalBody.dataset.origBorder = modalBody.style.border;
-
-                modalBody.style.setProperty('max-height', 'none', 'important');
-                modalBody.style.setProperty('border-radius', '0px', 'important');
-                modalBody.style.setProperty('border', 'none', 'important');
-            }
-
-            // Move Stop button wrapper to absolute positioning on the screen
-            const stopOverlay = document.getElementById('grid-gh-stop-overlay');
-            if (stopOverlay) {
-                stopOverlay.dataset.origPosition = stopOverlay.style.position;
-                stopOverlay.dataset.origTop = stopOverlay.style.top;
-                stopOverlay.dataset.origRight = stopOverlay.style.right;
-                stopOverlay.dataset.origMargin = stopOverlay.style.margin;
-                stopOverlay.dataset.origZIndex = stopOverlay.style.zIndex;
-
-                stopOverlay.style.setProperty('position', 'absolute', 'important');
-                stopOverlay.style.setProperty('top', '20px', 'important');
-                stopOverlay.style.setProperty('right', '20px', 'important');
-                stopOverlay.style.setProperty('margin', '0px', 'important');
-                stopOverlay.style.setProperty('z-index', '9999', 'important');
-            }
-        }
+        updateGuitarHeroUI(isGuitarHeroMode);
+        
+        // Lead-in duration
         startPlayback(true);
     } else {
         if (btn) btn.textContent = 'Play ▶';

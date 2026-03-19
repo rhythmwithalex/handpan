@@ -16,6 +16,7 @@ const customModal = document.getElementById('custom-scale-modal');
 
 // State for 2-step selection
 let selectedTemplate = null;
+let creationMode = 'select'; // 'select' or 'clone'
 
 export function initModals(onScaleSelect) {
     onScaleSelectCallback = onScaleSelect;
@@ -27,7 +28,9 @@ export function initModals(onScaleSelect) {
     });
 
     // Custom Scale Modal
-    document.getElementById('btn-custom-scale')?.addEventListener('click', () => openCustomModal());
+    document.getElementById('btn-custom-scale')?.addEventListener('click', () => {
+        renderScaleSelection('choice');
+    });
     document.getElementById('close-custom-modal')?.addEventListener('click', () => {
         closeModal(customModal);
     });
@@ -62,6 +65,7 @@ export function initModals(onScaleSelect) {
 }
 
 export function openScaleModal() {
+    creationMode = 'select'; // Reset when opened normally
     renderScaleSelection();
     showModal(scaleModal);
 }
@@ -78,12 +82,14 @@ export function closeModal(modal) {
 
     if (!anyOpen) {
         document.getElementById('modal-overlay').style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 }
 
 export function showModal(modal) {
     if (modal) modal.style.display = 'flex';
     document.getElementById('modal-overlay').style.display = 'block';
+    document.body.classList.add('modal-open');
 }
 
 function renderScaleSelection(step = 'categories') {
@@ -92,6 +98,22 @@ function renderScaleSelection(step = 'categories') {
 
     if (step === 'categories') {
         selectedTemplate = null;
+        
+        // Restore default title and footer
+        const modalTitle = scaleModal.querySelector('h2');
+        if (modalTitle) modalTitle.textContent = 'Select Scale Type';
+        const footerBtn = document.getElementById('btn-custom-scale');
+        if (footerBtn) footerBtn.style.display = 'block';
+
+        if (creationMode === 'clone') {
+            if (modalTitle) modalTitle.textContent = 'Create Custom Handpan';
+            if (footerBtn) footerBtn.style.display = 'none';
+
+            const cloneHeader = document.createElement('div');
+            cloneHeader.className = 'scale-category-header clone-mode-info';
+            cloneHeader.innerHTML = `<strong>1. Pick a base structure for your custom scale</strong>`;
+            list.appendChild(cloneHeader);
+        }
 
         // Render Scale Categories (Templates) sorted alphabetically
         const sortedTemplates = [...SCALE_TEMPLATES].sort((a, b) => a.name.localeCompare(b.name));
@@ -128,6 +150,56 @@ function renderScaleSelection(step = 'categories') {
                 renderScaleItem(scale, list, true);
             });
         }
+    } else if (step === 'choice') {
+        // Change Modal Title and Hide Footer Button
+        const modalTitle = scaleModal.querySelector('h2');
+        if (modalTitle) modalTitle.textContent = 'Create Custom Handpan';
+        const footerBtn = document.getElementById('btn-custom-scale');
+        if (footerBtn) footerBtn.style.display = 'none';
+
+        const header = document.createElement('div');
+        header.className = 'scale-category-header';
+        header.innerHTML = `<strong>How would you like to start?</strong>`;
+        list.appendChild(header);
+
+        const choiceContainer = document.createElement('div');
+        choiceContainer.className = 'choice-container';
+        choiceContainer.style.display = 'flex';
+        choiceContainer.style.flexDirection = 'column';
+        choiceContainer.style.gap = '15px';
+        choiceContainer.style.marginTop = '20px';
+
+        const emptyBtn = document.createElement('button');
+        emptyBtn.className = 'premium-btn';
+        emptyBtn.style.background = 'rgba(255,255,255,0.05)';
+        emptyBtn.style.color = 'var(--text-main)';
+        emptyBtn.innerHTML = '✨ Create Empty Handpan<br><small style="opacity: 0.6">Start from scratch</small>';
+        emptyBtn.onclick = () => openCustomModal();
+
+        const fromExistingBtn = document.createElement('button');
+        fromExistingBtn.className = 'premium-btn';
+        fromExistingBtn.innerHTML = '📋 Based on Existing Scale<br><small style="opacity: 0.8">Pick a base structure to edit</small>';
+        fromExistingBtn.onclick = () => {
+            creationMode = 'clone';
+            renderScaleSelection('categories');
+        };
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'premium-btn secondary-btn';
+        cancelBtn.style.background = 'transparent';
+        cancelBtn.style.border = '1px solid rgba(0,0,0,0.1)';
+        cancelBtn.style.marginTop = '20px';
+        cancelBtn.style.width = 'auto';
+        cancelBtn.style.alignSelf = 'center';
+        cancelBtn.style.padding = '10px 30px';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => renderScaleSelection('categories');
+
+        choiceContainer.appendChild(emptyBtn);
+        choiceContainer.appendChild(fromExistingBtn);
+        list.appendChild(choiceContainer);
+        list.appendChild(cancelBtn);
+
     } else if (step === 'keys') {
         // Back Button
         const backBtn = document.createElement('div');
@@ -136,9 +208,16 @@ function renderScaleSelection(step = 'categories') {
         backBtn.onclick = () => renderScaleSelection('categories');
         list.appendChild(backBtn);
 
+        const footerBtn = document.getElementById('btn-custom-scale');
+        if (footerBtn) footerBtn.style.display = creationMode === 'clone' ? 'none' : 'block';
+
         const header = document.createElement('div');
         header.className = 'scale-category-header';
-        header.innerHTML = `Select Key for <strong>${selectedTemplate.name}</strong>`;
+        if (creationMode === 'clone') {
+            header.innerHTML = `<strong>2. Select Key for ${selectedTemplate.name}</strong>`;
+        } else {
+            header.innerHTML = `Select Key for <strong>${selectedTemplate.name}</strong>`;
+        }
         list.appendChild(header);
 
         const grid = document.createElement('div');
@@ -149,7 +228,7 @@ function renderScaleSelection(step = 'categories') {
             keyBtn.className = 'scale-key-btn';
             keyBtn.textContent = key;
             keyBtn.onclick = () => {
-                generateAndSelectScale(selectedTemplate, key);
+                handleScaleSelected(generateScaleObject(selectedTemplate, key));
             };
             grid.appendChild(keyBtn);
         });
@@ -211,7 +290,7 @@ function renderScaleItem(scale, container, isCustom = false) {
     div.onclick = (e) => {
         // Ignore if action button clicked
         if (e.target.closest('.scale-actions')) return;
-        selectScale(scale);
+        handleScaleSelected(scale);
     };
 
     if (isCustom) {
@@ -239,150 +318,62 @@ function selectScale(scale) {
     if (onScaleSelectCallback) onScaleSelectCallback(scale);
     closeModal(scaleModal);
 }
-
 function generateAndSelectScale(template, key) {
-    // Generate scale object from Template + Key
-    // Formula: semitones from Root.
-    // Root is 'key' (e.g. 'C#3'?). Templates have keys like 'C#'.
-    // Handpan usually has center Ding (Root) in 3rd octave (e.g. D3).
-    // Some low ones D2. Standard is 3.
+    const scale = generateScaleObject(template, key);
+    handleScaleSelected(scale);
+}
 
-    // Note names map
-    // Note names map for Sharps vs Flats
-    const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const flatNotes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-    // Find index of Root Note (using Sharps as reference)
-    let rootIndex = sharpNotes.indexOf(key);
-    if (rootIndex === -1) {
-        // Try to handle flat-named key input by mapping to sharp index
-        const flatIndex = flatNotes.indexOf(key);
-        if (flatIndex !== -1) {
-            rootIndex = flatIndex;
-        }
-    }
-
-    // Heuristics for Choosing Sharps or Flats
-    // Minor-ish scales (Kurd, Amara, Pygmy, Integral, Equinox, Mystic) typically use Flats for keys: F, Bb, Eb, Ab, Db, Gb... AND D, G, C.
-    // Major-ish scales (Sabye, Mixolydian, Hijaz?) typically use Sharps, except F, Bb, Eb...
-
-    // Simplification:
-    // If Scale Type contains 'Major' or 'Mixolydian', use simpler Major rule.
-    // Else use Minor rule.
-
-    const isMajor = template.type.includes('Major') || template.type.includes('Mixolydian') || template.type.includes('Dominant');
-
-    // Keys that prefer Flats in Major context
-    const majorFlatKeys = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'];
-
-    // Keys that prefer Flats in Minor context (D Minor has Bb, G Minor has Bb, Eb etc.)
-    // Natural Minor Flat Keys: D, G, C, F, Bb, Eb, Ab...
-    // Sharps: E, B, F#, C#, G#, D#, A#
-    const minorFlatKeys = ['C', 'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'D', 'G', 'A']; // A Minor has no sharps/flats but G dorian might? A minor is natural.
-    // Actually lets just list Sharp keys for Minor to be safe:
-    // E (F#), B (C#, F#), F# (C#, F#, G#), C#...
-
-    let useFlats = false;
-
-    if (isMajor) {
-        if (majorFlatKeys.includes(key)) useFlats = true;
+function handleScaleSelected(scale) {
+    if (creationMode === 'clone') {
+        openCustomModal(scale, true); // true = clone
+        creationMode = 'select'; // Reset
     } else {
-        // Minor / Other
-        if (minorFlatKeys.includes(key)) useFlats = true;
+        selectScale(scale);
     }
+}
 
-    // Heuristics for sequential lettering
-    const getSpellings = (idx) => {
-        const s = sharpNotes[idx % 12];
-        const f = flatNotes[idx % 12];
-        return s === f ? [s] : [s, f];
+// Helpers for scale generation
+function generateScaleObject(template, key) {
+    const dingOctave = 3; // Default
+    const noteLetters = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const keyMap = { 
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 
+        'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 
+        'A#': 10, 'Bb': 10, 'B': 11 
     };
-
-    // Pre-calculate unambiguous letters to avoid duplicate letters in scale (Enharmonic spelling fix)
-    const globalUsedLetters = new Set();
-
-    // The ding's letter is fixed based on user input (or its 1st character)
-    globalUsedLetters.add(key.charAt(0));
-
-    // Gather all unambiguous letters from the scale formula
-    template.formula.forEach(semitones => {
-        let chromaticIndex = (rootIndex + semitones) % 12;
-        const candidates = getSpellings(chromaticIndex);
-        if (candidates.length === 1) {
-            globalUsedLetters.add(candidates[0].charAt(0));
-        }
-    });
-
-    let rootOctave = 3;
-    // Keys G (7) through B (11) typically use the 2nd octave for the handpan Ding
-    if (rootIndex >= 7) {
-        rootOctave = 2;
-    }
-
-    // Calculate Ding (Root) based on user Key selection (force their spelling)
-    const ding = `${key}${rootOctave}`;
-
-    // Calculate Side Notes with "Different Letter" Heuristic
-    let previousNote = ding;
+    const rootIndex = keyMap[key] !== undefined ? keyMap[key] : 0;
+    
+    const ding = `${key}${dingOctave}`;
+    const useFlats = key.includes('b') || ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].includes(key);
 
     const sideNotes = template.formula.map(semitones => {
-        let absIndex = rootIndex + semitones;
-        let octave = rootOctave + Math.floor(absIndex / 12);
-        let chromaticIndex = absIndex % 12;
+        // Correct octave calculation: 
+        // 1. Find total semitones from C in the ding's octave
+        // 2. Add Ding's octave baseline
+        let totalSemitonesFromC = rootIndex + semitones;
+        let octave = dingOctave + Math.floor(totalSemitonesFromC / 12);
+        let targetIndex = ((totalSemitonesFromC % 12) + 12) % 12; // Ensure positive
 
-        const candidates = getSpellings(chromaticIndex);
-        const prevLetter = previousNote.charAt(0);
-
-        // Choose best candidate
-        let chosen = candidates[0];
-
-        if (candidates.length > 1) {
-            const c1 = candidates[0]; // Sharp
-            const c2 = candidates[1]; // Flat
-
-            const c1Conflict = globalUsedLetters.has(c1.charAt(0));
-            const c2Conflict = globalUsedLetters.has(c2.charAt(0));
-
-            if (c1Conflict && !c2Conflict) {
-                chosen = c2;
-            } else if (!c1Conflict && c2Conflict) {
-                chosen = c1;
-            } else {
-                // Tie breaker: check if it conflicts with the immediate previous note
-                const localC1Conflict = c1.charAt(0) === prevLetter;
-                const localC2Conflict = c2.charAt(0) === prevLetter;
-
-                if (localC1Conflict && !localC2Conflict) {
-                    chosen = c2;
-                } else if (!localC1Conflict && localC2Conflict) {
-                    chosen = c1;
-                } else {
-                    // Final fallback to scale heuristic
-                    chosen = useFlats ? c2 : c1;
-                }
-            }
-        }
-
-        // Add the chosen note's letter to the global set to inform future decisions
-        globalUsedLetters.add(chosen.charAt(0));
-
-        const noteName = `${chosen}${octave}`;
-        previousNote = noteName;
-        return noteName;
+        const handpanNames = {
+            'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
+            'B#': 'C', 'E#': 'F', // Enharmonic equivalents for flats
+            'Cb': 'B', 'Fb': 'E' // Enharmonic equivalents for sharps
+        };
+        let c1 = noteLetters[targetIndex];
+        const noteNameBase = useFlats ? (handpanNames[c1] || c1) : c1;
+        return `${noteNameBase}${octave}`;
     });
 
-    const scale = {
+    return {
         id: `gen-${template.name}-${key}`.toLowerCase().replace(/\s+/g, '-'),
         name: `${key} ${template.name}`,
         top: [ding, ...sideNotes],
         bottom: {}
     };
-
-    selectScale(scale);
 }
 
 // Custom Modal Logic
-function openCustomModal(editScale = null) {
+function openCustomModal(editScale = null, isClone = false) {
     closeModal(scaleModal); // Ensure main is closed
     showModal(customModal);
 
@@ -391,8 +382,12 @@ function openCustomModal(editScale = null) {
     const bottomInput = document.getElementById('custom-scale-bottom');
 
     if (editScale) {
-        customModal.dataset.editId = editScale.id;
-        nameInput.value = editScale.name;
+        if (!isClone) {
+            customModal.dataset.editId = editScale.id;
+        } else {
+            delete customModal.dataset.editId;
+        }
+        nameInput.value = isClone ? `${editScale.name} (Custom)` : editScale.name;
         topInput.value = editScale.top.join(' ');
 
         // Convert bottom object to string "Note (Parent) Note (Parent)"

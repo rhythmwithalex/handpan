@@ -1,67 +1,67 @@
 
 export const SCALE_TEMPLATES = [
     {
-        name: 'Kurd',
+        name: 'Kurd 9',
         type: 'Natural Minor (Ding+8)',
         keys: ['A', 'B', 'C#', 'D', 'E', 'G'],
         formula: [7, 8, 10, 12, 14, 15, 17, 19] // 5, b6, b7, 1, 2, b3, 4, 5
     },
     {
-        name: 'Kurd 9',
+        name: 'Kurd 10',
         type: 'Natural Minor (Ding+9)',
         keys: ['A', 'B', 'C#', 'D', 'E', 'G'],
         formula: [7, 8, 10, 12, 14, 15, 17, 19, 22] // 5, b6, b7, 1, 2, b3, 4, 5, b7
     },
     {
-        name: 'Amara',
+        name: 'Amara 9',
         type: 'Celtic Minor',
         keys: ['B', 'C#', 'D', 'E', 'F', 'G'],
         formula: [7, 10, 12, 14, 15, 17, 19, 22] // 5, b7, 1, 2, b3, 4, 5, b7
     },
     {
-        name: 'Pygmy',
+        name: 'Pygmy 9',
         type: 'Pentatonic',
         keys: ['D', 'E', 'F', 'F#', 'G'],
         formula: [5, 7, 8, 12, 14, 15, 17, 19] // 4, 5, b6, 1, 2, b3, 4, 5
     },
     {
-        name: 'Hijaz',
+        name: 'Hijaz 9',
         type: 'Phrygian Dominant',
         keys: ['B', 'C#', 'D', 'E', 'F', 'G'],
         formula: [7, 8, 11, 12, 14, 15, 17, 19] // 5, b6, 7, 1, 2, b3, 4, 5
     },
     {
-        name: 'Integral',
+        name: 'Integral 8',
         type: 'Minor Variant',
         keys: ['B', 'C', 'C#', 'D'],
         formula: [7, 8, 10, 12, 14, 15, 17] // 5, b6, b7, 1, 2, b3, 4
     },
     {
-        name: 'Equinox',
+        name: 'Equinox 9',
         type: 'Minor',
         keys: ['B', 'C', 'E', 'F', 'G'],
         formula: [3, 7, 8, 10, 12, 14, 15, 19] // b3, 5, b6, b7, 1, 2, b3, 5
     },
     {
-        name: 'Sabye',
+        name: 'Sabye 9',
         type: 'Major',
         keys: ['Bb', 'C', 'D', 'F', 'G'],
         formula: [7, 9, 11, 12, 14, 16, 17, 19] // 5, 6, 7, 1, 2, 3, 4, 5
     },
     {
-        name: 'Mixolydian',
+        name: 'Mixolydian 9',
         type: 'Mixolydian',
         keys: ['A', 'C', 'D', 'F', 'G'],
         formula: [7, 9, 10, 12, 14, 15, 17, 19] // 5, 6, b7, 1, 2, b3, 4, 5
     },
     {
-        name: 'Mystic',
+        name: 'Mystic 9',
         type: 'Minor',
         keys: ['A', 'C', 'D', 'F', 'G'],
         formula: [5, 7, 10, 12, 14, 15, 17, 19] // 4, 5, b7, 1, 2, b3, 4, 5
     },
     {
-        name: 'Aegean',
+        name: 'Aegean 9',
         type: 'Lydian',
         keys: ['C', 'C#', 'D', 'E'],
         formula: [4, 7, 11, 12, 16, 18, 19, 23] // 3, 5, 7, 1, 3, #4, 5, 7
@@ -70,14 +70,14 @@ export const SCALE_TEMPLATES = [
 
 export const PREDEFINED_SCALES = [
     {
-        id: 'd-kurd-9',
-        name: 'D Kurd 9',
+        id: 'd-kurd-10',
+        name: 'D Kurd 10',
         top: ['D3', 'A3', 'Bb3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'C5'],
         bottom: {}
     },
     {
-        id: 'e-amara',
-        name: 'E Amara',
+        id: 'e-amara-9',
+        name: 'E Amara 9',
         top: ['E3', 'B3', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'D5'],
         bottom: { 'D:F#3': 'F#4', 'D:G3': 'G4', 'E5': 'B4' }
     },

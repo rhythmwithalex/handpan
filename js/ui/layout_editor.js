@@ -230,6 +230,22 @@ function renderEditorSVG() {
             let defaultR = isDing ? 43 : 36;
             if (isBottom) defaultR = 27;
 
+            // PERSISTENCE FIX: If the note doesn't have a layout entry yet, 
+            // save the calculated default position to currentLayout immediately.
+            // This prevents the note from "jumping" if the automatic layout 
+            // logic recalculates (e.g., when a new note is added and 'N' changes).
+            if (!currentLayout[name]) {
+                currentLayout[name] = {
+                    x: defaultPos.x,
+                    y: defaultPos.y,
+                    rx: defaultR,
+                    ry: defaultR,
+                    angle: 0,
+                    isDing,
+                    isBottom
+                };
+            }
+
             console.log(`Rendering note: ${name}`, { isDing, isBottom, defaultPos });
             renderDraggableNote(name, defaultPos, defaultR, defaultR, isDing, isBottom);
         });

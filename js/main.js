@@ -10,7 +10,7 @@ import { initChordGrid, renderChordGrid, toggleChordSort } from './ui/chord_grid
 import { initProgressionUI, addChordToProgression, updateProgressionItem, getProgressionChords, clearProgression, exportProgressionData, loadProgressionData } from './ui/progression.js';
 import { initEditor, openEditor } from './ui/editor.js';
 import { initInspirations } from './ui/inspirations.js';
-import { initGridEditor, openGridEditor } from './ui/grid_editor.js';
+import { initGridEditor, openGridEditor, closeGridEditor } from './ui/grid_editor.js';
 import { initLayoutEditor } from './ui/layout_editor.js';
 import { saveStateToLocal, loadStateFromLocal, generateShareUrl, decodeUrlData } from './data/storage.js';
 
@@ -787,6 +787,13 @@ function setupGlobalEvents() {
             if (notationInfo && notationInfo.style.display !== 'none' && !notationInfo.classList.contains('hidden')) {
                 notationInfo.style.display = 'none';
                 return; // Stop here, don't close the Editor underneath
+            }
+
+            // Priority 2: Grid Editor
+            const gridModal = document.getElementById('grid-editor-modal');
+            if (gridModal && gridModal.style.display !== 'none') {
+                closeGridEditor();
+                return;
             }
 
             // Otherwise, close other modals
