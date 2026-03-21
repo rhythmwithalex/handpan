@@ -16,6 +16,8 @@ let isMultiSelectMode = false; // For iPad/touch support
 let initialResizeData = null;
 let initialRotationData = null;
 let initialDraggerData = null;
+let lastClickTime = 0;
+let lastClickedNote = null;
 
 const MIN_RADIUS = 10;
 const CANVAS_SIZE = 500;
@@ -377,6 +379,7 @@ function renderPropertiesPanel() {
                     <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Style:</span>
                     <button id="btn-copy-params" class="premium-btn" style="padding: 4px 10px; font-size: 0.75rem; color: #000; font-weight: 700;">Copy</button>
                     <button id="btn-paste-params" class="premium-btn" style="padding: 4px 10px; font-size: 0.75rem; color: #000; font-weight: 700;" ${!copiedParams ? 'disabled' : ''}>Paste</button>
+                    <button id="btn-clone-selected" class="premium-btn" style="padding: 4px 10px; font-size: 0.75rem; color: #000; font-weight: 700;">Clone</button>
                 </div>
             </div>
 
@@ -396,6 +399,7 @@ function renderPropertiesPanel() {
         
         document.getElementById('btn-copy-params').addEventListener('click', copySelectedParams);
         document.getElementById('btn-paste-params').addEventListener('click', pasteParamsToSelection);
+        document.getElementById('btn-clone-selected').addEventListener('click', cloneSelectedNotes);
         document.getElementById('btn-delete-selected').addEventListener('click', deleteSelectedNotes);
         return;
     }
@@ -407,7 +411,15 @@ function renderPropertiesPanel() {
 
     panel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-weight: 700; color: white; font-size: 1.1rem;">${name}</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-weight: 700; color: white; font-size: 1.1rem;">${name}</div>
+                <button id="btn-clone-icon" class="icon-btn" title="Clone Note" style="background: rgba(255,255,255,0.15); border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; transition: all 0.2s;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+            </div>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Style:</span>
                 <button id="btn-copy-params" class="premium-btn" style="padding: 4px 10px; font-size: 0.75rem; color: #000; font-weight: 700;">Copy</button>
@@ -484,7 +496,7 @@ function renderPropertiesPanel() {
         isMultiSelectMode = e.target.checked;
     });
 
-    document.getElementById('btn-update-note-meta').addEventListener('click', () => {
+    const triggerUpdate = () => {
         const newName = document.getElementById('edit-note-name').value.trim();
         const newSphere = document.getElementById('edit-note-sphere').value;
         const isDing = document.getElementById('edit-note-type').value === 'ding';
@@ -494,7 +506,13 @@ function renderPropertiesPanel() {
         }
         
         handleNoteMetaUpdate(name, newName, newSphere, isDing);
+    };
+
+    document.getElementById('edit-note-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') triggerUpdate();
     });
+
+    document.getElementById('btn-update-note-meta').addEventListener('click', triggerUpdate);
 
     // Attach listeners
     panel.querySelectorAll('input').forEach(input => {
@@ -519,6 +537,8 @@ function renderPropertiesPanel() {
 
     document.getElementById('btn-copy-params').onclick = copySelectedParams;
     document.getElementById('btn-paste-params').onclick = pasteParamsToSelection;
+    const cloneBtn = document.getElementById('btn-clone-selected') || document.getElementById('btn-clone-icon');
+    if (cloneBtn) cloneBtn.onclick = cloneSelectedNotes;
     document.getElementById('btn-delete-selected').onclick = deleteSelectedNotes;
 }
 
@@ -612,10 +632,40 @@ function onPointerDown(e) {
         e.stopPropagation(); return;
     }
 
-    // 3. Note drag (Multi-select)
     const g = e.target.closest('.draggable');
     if (g) {
         const name = g.getAttribute('data-note');
+        
+        // Simulated Double-Click detection
+        const now = Date.now();
+        if (now - lastClickTime < 400 && lastClickedNote === name) {
+            console.log("Simulated double-click on:", name);
+            // Re-render and focus
+            selectedNotes = [{
+                name: name,
+                default: { 
+                    x: parseFloat(g.getAttribute('data-default-x')),
+                    y: parseFloat(g.getAttribute('data-default-y')),
+                    rx: parseFloat(g.getAttribute('data-default-rx')),
+                    ry: parseFloat(g.getAttribute('data-default-ry'))
+                }
+            }];
+            renderEditorSVG();
+            setTimeout(() => {
+                const input = document.getElementById('edit-note-name');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
+            
+            lastClickTime = 0;
+            e.stopPropagation();
+            return;
+        }
+        lastClickTime = now;
+        lastClickedNote = name;
+
         const noteInfo = {
             name: name,
             default: {
@@ -851,6 +901,67 @@ function pasteParamsToSelection() {
     
     renderEditorSVG();
     renderPropertiesPanel();
+}
+
+function cloneSelectedNotes() {
+    if (selectedNotes.length === 0) return;
+    
+    const scale = scaleOnStart;
+    const newSelection = [];
+    
+    const noteToMidi = (nm) => {
+        const notes = { 'C': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3, 'E': 4, 'F': 5, 'F#': 6, 'GB': 6, 'G': 7, 'G#': 8, 'AB': 8, 'A': 9, 'A#': 10, 'BB': 10, 'B': 11 };
+        const m = nm.match(/^([A-G][#b]?)(\d*)$/i);
+        if (!m) return 60;
+        return (parseInt(m[2] || 4) + 1) * 12 + notes[m[1].toUpperCase()];
+    };
+    const midiToNote = (midi) => {
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
+        return notes[midi % 12] + (Math.floor(midi / 12) - 1);
+    };
+
+    selectedNotes.forEach(sn => {
+        const originalData = currentLayout[sn.name] || sn.default;
+        const isDing = !!originalData.isDing;
+        const isBottom = !!originalData.isBottom;
+        const baseName = sn.name.replace(/^D:/, '');
+        
+        let midi = noteToMidi(baseName);
+        let newName = baseName;
+        let attempt = 0;
+        
+        while (attempt < 48) {
+            midi++;
+            newName = midiToNote(midi);
+            if (!currentLayout[newName] && !currentLayout[`D:${newName}`]) break;
+            attempt++;
+        }
+        
+        const newKey = isDing ? `D:${newName}` : newName;
+        
+        currentLayout[newKey] = {
+            ...JSON.parse(JSON.stringify(originalData)),
+            x: Math.min(CANVAS_SIZE - 20, originalData.x + 30),
+            y: Math.min(CANVAS_SIZE - 20, originalData.y + 30)
+        };
+        
+        if (isDing) {
+            if (!scale.top.includes(newKey)) scale.top.push(newKey);
+        } else if (isBottom) {
+            const parent = scale.bottom[sn.name] || scale.top[0];
+            scale.bottom[newKey] = parent;
+        } else {
+            if (!scale.top.includes(newKey)) scale.top.push(newKey);
+        }
+        
+        newSelection.push({
+            name: newKey,
+            default: { ...currentLayout[newKey] }
+        });
+    });
+    
+    selectedNotes = newSelection;
+    renderEditorSVG(); 
 }
 
 function handleNoteMetaUpdate(oldName, newName, sphere, isDing) {
