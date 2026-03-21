@@ -334,8 +334,7 @@ function handleScaleSelected(scale) {
 
 // Helpers for scale generation
 function generateScaleObject(template, key) {
-    const dingOctave = 3; // Default
-    const noteLetters = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const dingOctave = 3; 
     const keyMap = { 
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 
         'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 
@@ -343,26 +342,54 @@ function generateScaleObject(template, key) {
     };
     const rootIndex = keyMap[key] !== undefined ? keyMap[key] : 0;
     
-    const ding = `${key}${dingOctave}`;
-    const useFlats = key.includes('b') || ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].includes(key);
-
-    const sideNotes = template.formula.map(semitones => {
-        // Correct octave calculation: 
-        // 1. Find total semitones from C in the ding's octave
-        // 2. Add Ding's octave baseline
+    // 1. Calculate all semitone indices and octaves first
+    const indices = [rootIndex]; // Ding is rootIndex
+    const octaves = [dingOctave];
+    
+    template.formula.forEach(semitones => {
         let totalSemitonesFromC = rootIndex + semitones;
-        let octave = dingOctave + Math.floor(totalSemitonesFromC / 12);
-        let targetIndex = ((totalSemitonesFromC % 12) + 12) % 12; // Ensure positive
-
-        const handpanNames = {
-            'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
-            'B#': 'C', 'E#': 'F', // Enharmonic equivalents for flats
-            'Cb': 'B', 'Fb': 'E' // Enharmonic equivalents for sharps
-        };
-        let c1 = noteLetters[targetIndex];
-        const noteNameBase = useFlats ? (handpanNames[c1] || c1) : c1;
-        return `${noteNameBase}${octave}`;
+        let oct = dingOctave + Math.floor(totalSemitonesFromC / 12);
+        let targetIdx = ((totalSemitonesFromC % 12) + 12) % 12;
+        indices.push(targetIdx);
+        octaves.push(oct);
     });
+
+    // 2. Determine best naming (Sharps vs Flats)
+    const sharpNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const flatNames  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    const countDups = (names) => {
+        const letters = names.map(n => n[0].toUpperCase());
+        const seen = new Set();
+        let dups = 0;
+        letters.forEach(l => {
+            if (seen.has(l)) dups++;
+            seen.add(l);
+        });
+        return dups;
+    };
+
+    const resSharp = indices.map(i => sharpNames[i]);
+    const resFlat = indices.map(i => flatNames[i]);
+    
+    const dupsSharp = countDups(resSharp);
+    const dupsFlat = countDups(resFlat);
+
+    let chosenNames;
+    if (dupsFlat < dupsSharp) {
+        chosenNames = resFlat;
+    } else if (dupsSharp < dupsFlat) {
+        chosenNames = resSharp;
+    } else {
+        // Tie-breaker: use key name preference
+        const useFlats = key.includes('b') || ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].includes(key);
+        chosenNames = useFlats ? resFlat : resSharp;
+    }
+
+    // 3. Construct the scale object
+    const allNotes = chosenNames.map((name, i) => `${name}${octaves[i]}`);
+    const ding = allNotes[0];
+    const sideNotes = allNotes.slice(1);
 
     return {
         id: `gen-${template.name}-${key}`.toLowerCase().replace(/\s+/g, '-'),
@@ -440,13 +467,13 @@ function handleCustomSave() {
         bottom
     };
 
-    saveCustomScale(id, scale);
+    const savedScale = saveCustomScale(id, scale);
     closeModal(customModal);
 
     // If editing currently active scale, select it?
     // Or nicely ask.
     // For now, just re-select it to update UI
-    if (onScaleSelectCallback) onScaleSelectCallback(scale);
+    if (onScaleSelectCallback) onScaleSelectCallback(savedScale);
 
     // Hybrid Workflow: Automatically open Layout Editor after creation
     if (!isEdit) {

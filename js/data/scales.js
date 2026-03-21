@@ -147,13 +147,16 @@ export function getAllScales() {
 export function saveCustomScale(scaleId, scaleData) {
     const customScales = getCustomScales();
     const existingIndex = customScales.findIndex(s => s.id === scaleId);
+    let updatedScale = scaleData;
 
     if (existingIndex > -1) {
-        customScales[existingIndex] = { ...customScales[existingIndex], ...scaleData };
+        updatedScale = { ...customScales[existingIndex], ...scaleData };
+        customScales[existingIndex] = updatedScale;
     } else {
         customScales.push(scaleData);
     }
     setCustomScales(customScales);
+    return updatedScale;
 }
 
 export function deleteCustomScale(scaleId) {

@@ -556,24 +556,31 @@ function updateGuitarHeroUI(active) {
             modalBody.style.setProperty('flex', '1', 'important');
         }
     } else {
-        if (overlay) overlay.style.padding = '';
+        if (overlay) {
+            overlay.style.removeProperty('padding');
+        }
         if (modal) {
-            modal.style.width = '650px';
-            modal.style.maxWidth = '95vw';
-            modal.style.maxHeight = '90vh';
-            modal.style.height = '';
-            modal.style.margin = '';
-            modal.style.padding = '25px';
-            modal.style.borderRadius = '16px';
-            modal.style.border = '';
+            // Remove style attribute overrides to fall back to index.html base styles
+            modal.style.removeProperty('width');
+            modal.style.removeProperty('max-width');
+            modal.style.removeProperty('max-height');
+            modal.style.removeProperty('height');
+            modal.style.removeProperty('margin');
+            modal.style.removeProperty('padding');
+            modal.style.removeProperty('border-radius');
+            modal.style.removeProperty('border');
         }
         if (modalBody) {
-            modalBody.style.maxHeight = 'calc(90vh - 200px)'; // Leave room for header/footer
-            modalBody.style.borderRadius = '8px';
-            modalBody.style.border = '';
-            modalBody.style.height = '';
-            modalBody.style.overflowY = 'auto'; // Ensure the scroll area within body works
-            modalBody.style.flex = '1';
+            modalBody.style.removeProperty('max-height');
+            modalBody.style.removeProperty('border-radius');
+            modalBody.style.removeProperty('border');
+            modalBody.style.removeProperty('height');
+            modalBody.style.removeProperty('overflow-y');
+            modalBody.style.removeProperty('flex');
+            
+            // Re-apply normal mode scroll constraint if needed
+            modalBody.style.maxHeight = 'calc(90vh - 200px)';
+            modalBody.style.overflowY = 'auto';
         }
     }
 
