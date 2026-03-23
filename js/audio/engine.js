@@ -54,6 +54,16 @@ export function initAudio() {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
+
+    // Safari "Warm-up": Play a nearly silent buffer to unlock the context for scheduled audio.
+    // This is required on some iOS/macOS Safari versions to properly 'unmute'.
+    const osc = audioCtx.createOscillator();
+    const silentGain = audioCtx.createGain();
+    silentGain.gain.value = 0.0001; 
+    osc.connect(silentGain);
+    silentGain.connect(audioCtx.destination);
+    osc.start(0);
+    osc.stop(audioCtx.currentTime + 0.01);
 }
 
 export function setMasterVolume(val) {

@@ -58,20 +58,17 @@ const resetPrecountUI = () => {
 // --- Initialization ---
 
 function initApp() {
-    // 0. Welcome Overlay & Audio Init
-    const welcomeOverlay = document.getElementById('welcome-overlay');
-    const startBtn = document.getElementById('btn-start-app');
-    if (welcomeOverlay && startBtn) {
-        startBtn.addEventListener('click', () => {
-            try {
-                initAudio();
-            } catch (e) {
-                console.error("Audio init error:", e);
-            }
-            welcomeOverlay.style.opacity = '0';
-            setTimeout(() => welcomeOverlay.style.display = 'none', 300); // fade out duration
-        });
-    }
+    // 0. Audio Init (Instant-On)
+    // Global "Unlock" for Safari/Mobile - ensures AudioContext is resumed on the first interaction
+    const unlockAudioGlobally = () => {
+        try {
+            initAudio();
+        } catch (e) {}
+        document.removeEventListener('click', unlockAudioGlobally);
+        document.removeEventListener('touchstart', unlockAudioGlobally);
+    };
+    document.addEventListener('click', unlockAudioGlobally);
+    document.addEventListener('touchstart', unlockAudioGlobally);
 
     // 1. Init Data
     initCustomScales();

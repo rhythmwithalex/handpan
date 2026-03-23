@@ -263,9 +263,8 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     const dingRootStr = getDingRoot(dingName);
     const dingVal = NOTE_TO_MIDI[dingRootStr];
 
-    // Numbering Logic (123)
-    let allSideNotes = [...topSideNotes, ...sortedBottom];
-    let numberingCandidates = allSideNotes.filter(n => !n.startsWith('D:'));
+    // Numbering Logic (123) - ONLY TOP SPHERE (excluding center Ding)
+    let numberingCandidates = topSideNotes.filter(n => !n.startsWith('D:'));
     numberingCandidates = sortNotesByPitchLocal(numberingCandidates);
     const numberingMap = {};
     numberingCandidates.forEach((n, i) => {
@@ -279,7 +278,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
 
         if (mode === 'numbers') {
             if (isDing) return noteStr.replace(/^D:/, '');
-            return numberingMap[noteStr] || '?';
+            return numberingMap[noteStr] || noteStr.replace(/^D:/, ''); 
         }
 
         if (mode === 'degrees') {
