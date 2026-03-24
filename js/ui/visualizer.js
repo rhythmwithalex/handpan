@@ -43,13 +43,15 @@ export const layout = {
 // Caches for geometry
 let cachedBottomDeadzones = [];
 
-export function renderHandpanSVG(currentScale, mode = 'notes') {
-    const oldSvg = document.getElementById('handpan-svg');
-    if (!oldSvg) return;
+export function renderHandpanSVG(currentScale, mode = 'notes', targetSvg = null, customCallback = null) {
+    const originalSvg = targetSvg || document.getElementById('handpan-svg');
+    if (!originalSvg) return;
 
-    // Remove old listeners to avoid duplicates on re-render by cloning
-    const svg = oldSvg.cloneNode(false);
-    oldSvg.parentNode.replaceChild(svg, oldSvg);
+    // Remove old listeners and children to avoid duplicates on re-render by cloning
+    const svg = originalSvg.cloneNode(false);
+    originalSvg.parentNode.replaceChild(svg, originalSvg);
+
+    const isMain = svg.id === 'handpan-svg';
 
     // --- Cache Geometry for Performance ---
     const topNotes = currentScale.top;
@@ -250,6 +252,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     const dingName = topNotes[0];
 
     const nodesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    nodesGroup.id = isMain ? "hp-nodes-layer" : "";
     svg.appendChild(nodesGroup);
 
     const notePositions = {};
@@ -315,7 +318,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
     const dingRX = customLayout[dingName]?.rx || 43;
     const dingRY = customLayout[dingName]?.ry || 43;
     const dingAngle = customLayout[dingName]?.angle || 0;
-    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, dingRX, dingRY, dingAngle, true);
+    const dingG = createNoteG(dingName, dingLabel, dingPos.x, dingPos.y, dingRX, dingRY, dingAngle, true, false, customCallback || noteClickCallback, isMain);
     nodesGroup.appendChild(dingG);
     notePositions[dingName] = dingPos;
 
@@ -350,7 +353,7 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         ry = ry || baseR;
         const label = getLabel(name, i);
 
-        const g = createNoteG(name, label, x, y, rx, ry, angle, isExtraDing);
+        const g = createNoteG(name, label, x, y, rx, ry, angle, isExtraDing, false, customCallback || noteClickCallback, isMain);
         nodesGroup.appendChild(g);
         notePositions[name] = { x, y };
     });
@@ -384,15 +387,19 @@ export function renderHandpanSVG(currentScale, mode = 'notes') {
         
         const label = getLabel(note, topSideNotes.length + i);
 
-        const g = createNoteG(note, label, x, y, rx, ry, angle, note.startsWith('D:'), true);
+        const g = createNoteG(note, label, x, y, rx, ry, angle, note.startsWith('D:'), true, customCallback || noteClickCallback, isMain);
         nodesGroup.appendChild(g);
     });
 }
 
-function createNoteG(noteName, labelText, x, y, rx, ry, angle, isDing = false, isBottom = false) {
+function createNoteG(noteName, labelText, x, y, rx, ry, angle, isDing = false, isBottom = false, clickCallback = null, isMain = false) {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     const cleanName = noteName.replace(/^D:/, '');
-    g.id = `note-${cleanName}`;
+    
+    // We only use global IDs for the main handpan to support highlightNote
+    if (isMain) {
+        g.id = `note-${cleanName}`;
+    }
     g.classList.add("hp-note");
     if (isDing) g.classList.add("ding");
     if (isBottom) g.classList.add("side-note");
@@ -423,13 +430,12 @@ function createNoteG(noteName, labelText, x, y, rx, ry, angle, isDing = false, i
         if (e.type === 'pointerdown') {
             g.setPointerCapture(e.pointerId);
         }
-        if (noteClickCallback) {
-            noteClickCallback(cleanName);
+        if (clickCallback) {
+            clickCallback(cleanName);
         }
     };
 
     g.addEventListener('pointerdown', triggerNote, { passive: false });
-    // Keep touchstart to purely prevent default scaling/scrolling on older iOS if pointer events fail
     g.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 
     return g;

@@ -373,7 +373,7 @@
     <!-- Grid Editor Modal -->
     <div id="grid-editor-modal" class="modal-overlay" style="display: none; z-index: 2050;">
         <div class="modal-content glass-card"
-            style="width: 950px; max-width: 95vw; padding: 25px; display: flex; flex-direction: column; max-height: 90vh;">
+            style="width: 1000px; max-width: 98vw; padding: 25px; display: flex; flex-direction: column;">
             <div id="grid-editor-header" class="modal-header" style="margin-bottom: 15px;">
                 <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0;">Grid Editor
                 </h2>
@@ -459,6 +459,13 @@
                     <button id="grid-mode-select-all" class="icon-btn" title="Select All"
                         style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 0.9rem; font-weight: bold; color: var(--text-main);">All</button>
 
+                    <div style="width: 1px; height: 20px; background: rgba(0,0,0,0.1); margin: 0 4px;"></div>
+
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="grid-show-handpan-check" style="cursor: pointer;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Show Handpan</span>
+                    </label>
+
                     <!-- Contextual Delete -->
                     <button id="grid-mode-delete" class="icon-btn" title="Delete Selected"
                         style="display: none; background: rgba(231, 76, 60, 0.2); border: 1px solid #e74c3c; border-radius: 4px; padding: 4px 10px; font-size: 1.1rem; color: #e74c3c; margin-left: 4px; transition: all 0.2s;">🗑</button>
@@ -496,9 +503,16 @@
                 </div>
             </div>
 
-            <!-- The Grid Container -->
+            <!-- Modal Body (contains handpan, headers, and the grid itself) -->
             <div class="modal-body"
-                style="flex: 1; display: flex; flex-direction: column; background: #e9ecef; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); overflow: hidden; min-height: 250px;">
+                style="flex: 1; display: flex; flex-direction: column; background: #e9ecef; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); overflow-y: auto; overflow-x: hidden; min-height: 250px;">
+
+                <!-- Mini Handpan Extension -->
+                <div id="grid-mini-handpan-container" style="display: none; background: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; padding: 10px; position: relative;">
+                    <div style="max-width: 450px; margin: 0 auto; display: flex; align-items: center;">
+                        <svg id="grid-handpan-svg" viewBox="0 0 500 500" style="width: 100%; height: auto;"></svg>
+                    </div>
+                </div>
 
                 <!-- Numbering Track (Sticky Header) -->
                 <div id="grid-numbers-header"
@@ -519,7 +533,7 @@
                     </div>
                 </div>
 
-                <div style="flex: 1; display: flex; position: relative; overflow: hidden;">
+                <div style="flex: 1; display: flex; position: relative; overflow: hidden; min-height: 400px;">
                     <!-- Y-axis labels (touch scrollable to sync with canvas) -->
                     <div id="grid-labels-wrapper"
                         style="width: 50px; flex-shrink: 0; background: rgba(0,0,0,0.05); border-right: 1px solid rgba(0,0,0,0.1); overflow-y: auto; overflow-x: hidden; position: relative; scrollbar-width: none; -ms-overflow-style: none;">

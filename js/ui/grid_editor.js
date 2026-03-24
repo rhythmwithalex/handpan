@@ -1,6 +1,7 @@
 import { NOTE_TO_MIDI } from '../data/constants.js';
 import { playTone, playTak, getAudioContext, stopAllSounds } from '../audio/engine.js';
 import { getFrequencyForNoteName } from '../logic/chords.js';
+import { renderHandpanSVG } from './visualizer.js';
 
 let dependencies = {};
 let scaleNotesSorted = []; // Array of note names, highest to lowest pitch
@@ -22,6 +23,8 @@ let currentMode = 'draw'; // 'draw', 'select', 'move'
 let selectedNotes = []; // Array of note index numbers
 let marqueeBox = null; // { startX, startY, currentX, currentY }
 let isGuitarHeroMode = false;
+let isShowHandpan = false;
+let isDirty = false;
 
 let editingItem = null; // Store reference to Progression Item being edited
 
@@ -70,6 +73,8 @@ export function initGridEditor(deps) {
     const zoomHOut = document.getElementById('grid-zoom-h-out');
     const zoomVIn = document.getElementById('grid-zoom-v-in');
     const zoomVOut = document.getElementById('grid-zoom-v-out');
+
+    const showHandpanCheck = document.getElementById('grid-show-handpan-check');
 
     if (openBtn) openBtn.addEventListener('click', () => openGridEditor());
     if (closeBtn) closeBtn.addEventListener('click', () => closeGridEditor());
@@ -281,6 +286,13 @@ export function initGridEditor(deps) {
     if (playBtn) playBtn.addEventListener('click', togglePlay);
     if (ghStopBtn) ghStopBtn.addEventListener('click', togglePlay);
 
+    if (showHandpanCheck) {
+        showHandpanCheck.addEventListener('change', (e) => {
+            isShowHandpan = e.target.checked;
+            updateMiniHandpanUI();
+        });
+    }
+
     // Canvas interaction
     const scrollArea = document.getElementById('grid-scroll-area');
     const labelsWrapper = document.getElementById('grid-labels-wrapper');
@@ -343,6 +355,7 @@ function saveHistoryState() {
     });
     if (undoStack.length > 50) undoStack.shift();
     redoStack = [];
+    isDirty = true;
 }
 
 function undoHistory() {
@@ -474,14 +487,56 @@ export function openGridEditor(phraseString = null, itemId = null) {
     // Reset horizontal zoom
     BASE_COL_WIDTH = DEFAULT_BASE_COL_WIDTH;
 
+    isDirty = false;
+
     renderCanvas();
 }
 
-export function closeGridEditor() {
+/**
+ * @param {boolean} force - if true, bypasses the "unsaved changes" confirmation
+ */
+export function closeGridEditor(force = false) {
+    if (!force && isDirty) {
+        if (!confirm("You have unsaved changes in the grid. Are you sure you want to close and lose them?")) {
+            return;
+        }
+    }
+
     document.getElementById('grid-editor-modal').style.display = 'none';
     document.body.classList.remove('modal-open');
     if (isPlaying) togglePlay();
     updateGuitarHeroUI(false); // Ensure return to normal mode next time
+    
+    // Reset Handpan toggle
+    isShowHandpan = false;
+    const check = document.getElementById('grid-show-handpan-check');
+    if (check) check.checked = false;
+    updateMiniHandpanUI();
+}
+
+function updateMiniHandpanUI() {
+    const container = document.getElementById('grid-mini-handpan-container');
+    if (!container) return;
+
+    if (isShowHandpan && !(isGuitarHeroMode && isPlaying)) {
+        container.style.display = 'block';
+        const miniSvg = document.getElementById('grid-handpan-svg');
+        if (miniSvg) {
+            const currentScale = dependencies.getScale();
+            renderHandpanSVG(currentScale, 'notes', miniSvg, (noteName) => {
+                // Play sound
+                if (noteName === 'T' || noteName === 't') {
+                    playTak(0, noteName === 'T', noteName === 't');
+                } else {
+                    const freq = getFrequencyForNoteName(noteName);
+                    if (freq) playTone(freq, noteName);
+                }
+                // (Note insertion from handpan removed per user request)
+            });
+        }
+    } else {
+        container.style.display = 'none';
+    }
 }
 
 // Consolidate UI changes for Guitar Hero mode
@@ -544,7 +599,7 @@ function updateGuitarHeroUI(active) {
             modal.style.setProperty('height', '100vh', 'important');
             modal.style.setProperty('width', '100vw', 'important');
             modal.style.setProperty('margin', '0px', 'important');
-            modal.style.setProperty('padding', '20px 0 0 0', 'important');
+            modal.style.setProperty('padding', '0px', 'important');
             modal.style.setProperty('border-radius', '0px', 'important');
             modal.style.setProperty('border', 'none', 'important');
         }
@@ -562,14 +617,18 @@ function updateGuitarHeroUI(active) {
         if (modal) {
             // Remove style attribute overrides to fall back to index.html base styles
             modal.style.removeProperty('width');
+            modal.style.setProperty('width', '1000px', 'important');
             modal.style.removeProperty('max-width');
+            modal.style.setProperty('max-width', '98vw', 'important');
             modal.style.removeProperty('max-height');
             modal.style.removeProperty('height');
             modal.style.removeProperty('margin');
             modal.style.removeProperty('padding');
             modal.style.removeProperty('border-radius');
+            modal.style.removeProperty('border-radius');
             modal.style.removeProperty('border');
         }
+
         if (modalBody) {
             modalBody.style.removeProperty('max-height');
             modalBody.style.removeProperty('border-radius');
@@ -577,12 +636,11 @@ function updateGuitarHeroUI(active) {
             modalBody.style.removeProperty('height');
             modalBody.style.removeProperty('overflow-y');
             modalBody.style.removeProperty('flex');
-            
-            // Re-apply normal mode scroll constraint if needed
-            modalBody.style.maxHeight = 'calc(90vh - 200px)';
-            modalBody.style.overflowY = 'auto';
         }
     }
+
+    // Ensure handpan visibility matches mode
+    updateMiniHandpanUI();
 
     renderCanvas();
 }
@@ -1150,41 +1208,8 @@ function togglePlay() {
         animationFrameId = null;
         stopAllSounds();
 
-        document.getElementById('grid-editor-header').style.display = 'flex';
-        document.getElementById('grid-toolbar-1').style.display = 'flex';
-        document.getElementById('grid-toolbar-2').style.display = 'flex';
-        document.getElementById('grid-editor-footer').style.display = 'flex';
-        document.getElementById('grid-numbers-header').style.display = 'flex';
-        document.getElementById('grid-gh-stop-overlay').style.display = 'none';
-
-        if (isGuitarHeroMode) {
-            const overlay = document.getElementById('grid-editor-modal');
-            if (overlay) {
-                overlay.style.padding = overlay.dataset.origPadding || '';
-            }
-
-            // Restore modal
-            const modal = document.querySelector('#grid-editor-modal .modal-content');
-            if (modal) {
-                modal.style.cssText = modal.dataset.origCssText || '';
-            }
-
-            const modalBody = document.querySelector('#grid-editor-modal .modal-body');
-            if (modalBody) {
-                modalBody.style.maxHeight = modalBody.dataset.origMaxHeight || '';
-                modalBody.style.borderRadius = modalBody.dataset.origBorderRadius || '8px';
-                modalBody.style.border = modalBody.dataset.origBorder || '1px solid rgba(0,0,0,0.1)';
-            }
-
-            const stopOverlay = document.getElementById('grid-gh-stop-overlay');
-            if (stopOverlay) {
-                stopOverlay.style.position = stopOverlay.dataset.origPosition || '';
-                stopOverlay.style.top = stopOverlay.dataset.origTop || '';
-                stopOverlay.style.right = stopOverlay.dataset.origRight || '';
-                stopOverlay.style.margin = stopOverlay.dataset.origMargin || '';
-                stopOverlay.style.zIndex = stopOverlay.dataset.origZIndex || '';
-            }
-        }
+        // Use updateGuitarHeroUI for consistent restoration
+        updateGuitarHeroUI(isGuitarHeroMode);
 
         const container = document.getElementById('grid-labels-container');
         if (container) container.style.display = 'block';
@@ -1606,7 +1631,7 @@ function exportGridToPhrase() {
         phraseOutput = `(${phraseOutput})/${currentResolution}`;
     }
 
-    closeGridEditor();
+    closeGridEditor(true);
 
     const nameInput = document.getElementById('grid-phrase-name');
     const repeatsInput = document.getElementById('grid-phrase-repeats');
