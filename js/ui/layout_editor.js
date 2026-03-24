@@ -1,4 +1,5 @@
 import { layout, renderHandpanSVG } from './visualizer.js';
+import { exportScaleToFile } from '../utils/export.js';
 
 let dependencies = {};
 let currentLayout = {};
@@ -34,6 +35,7 @@ export function initLayoutEditor(deps) {
     const closeBtn = document.getElementById('layout-editor-close');
     const saveBtn = document.getElementById('layout-editor-save');
     const resetBtn = document.getElementById('layout-editor-reset');
+    const exportBtn = document.getElementById('layout-editor-export');
     const addNoteBtn = document.getElementById('btn-add-note-exec');
     const svg = document.getElementById('layout-editor-svg');
 
@@ -41,6 +43,7 @@ export function initLayoutEditor(deps) {
     if (closeBtn) closeBtn.addEventListener('click', closeLayoutEditor);
     if (saveBtn) saveBtn.addEventListener('click', saveLayout);
     if (resetBtn) resetBtn.addEventListener('click', resetLayout);
+    if (exportBtn) exportBtn.addEventListener('click', exportCurrentLayout);
     if (addNoteBtn) addNoteBtn.addEventListener('click', addNoteToLayout);
     
     const fabBtn = document.getElementById('btn-fab-add');
@@ -124,6 +127,18 @@ function saveLayout() {
     }
     
     closeLayoutEditor();
+}
+
+function exportCurrentLayout() {
+    if (!scaleOnStart) return;
+    
+    // Create a temporary scale object that includes the current (possibly unsaved) layout
+    const exportData = {
+        ...scaleOnStart,
+        layout: currentLayout
+    };
+    
+    exportScaleToFile(exportData);
 }
 
 function resetLayout() {

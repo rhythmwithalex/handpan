@@ -7,6 +7,7 @@ import {
     initCustomScales
 } from '../data/scales.js';
 import { openLayoutEditor } from './layout_editor.js';
+import { exportScaleToFile } from '../utils/export.js';
 
 let onScaleSelectCallback = null;
 
@@ -115,6 +116,20 @@ function renderScaleSelection(step = 'categories') {
             list.appendChild(cloneHeader);
         }
 
+        const actions = document.getElementById('scale-modal-actions');
+        if (actions) {
+            actions.innerHTML = '';
+            // Import Button at the top for easy access
+            const importBtn = document.createElement('button');
+            importBtn.className = 'premium-btn secondary-btn';
+            importBtn.style.margin = '0 0 15px 0';
+            importBtn.style.width = '100%';
+            importBtn.style.background = 'rgba(255,255,255,0.05)';
+            importBtn.innerHTML = '📂 Import Scale from File';
+            importBtn.onclick = () => triggerScaleImport();
+            actions.appendChild(importBtn);
+        }
+
         // Render Scale Categories (Templates) sorted alphabetically
         const sortedTemplates = [...SCALE_TEMPLATES].sort((a, b) => a.name.localeCompare(b.name));
         sortedTemplates.forEach(tmpl => {
@@ -151,6 +166,9 @@ function renderScaleSelection(step = 'categories') {
             });
         }
     } else if (step === 'choice') {
+        const actions = document.getElementById('scale-modal-actions');
+        if (actions) actions.innerHTML = '';
+        
         // Change Modal Title and Hide Footer Button
         const modalTitle = scaleModal.querySelector('h2');
         if (modalTitle) modalTitle.textContent = 'Create Custom Handpan';
@@ -201,6 +219,9 @@ function renderScaleSelection(step = 'categories') {
         list.appendChild(cancelBtn);
 
     } else if (step === 'keys') {
+        const actions = document.getElementById('scale-modal-actions');
+        if (actions) actions.innerHTML = '';
+
         // Back Button
         const backBtn = document.createElement('div');
         backBtn.className = 'scale-back-btn';
@@ -279,6 +300,7 @@ function renderScaleItem(scale, container, isCustom = false) {
     // Edit/Delete for Custom
     if (isCustom) {
         html += `<div class="scale-actions">`;
+        html += `<button class="icon-btn export-scale" title="Export to File">📥</button>`;
         html += `<button class="icon-btn edit-scale" title="Edit">✎</button>`;
         html += `<button class="icon-btn delete-scale" title="Delete">🗑</button>`;
         html += `</div>`;
@@ -296,6 +318,12 @@ function renderScaleItem(scale, container, isCustom = false) {
     if (isCustom) {
         const editBtn = div.querySelector('.edit-scale');
         const deleteBtn = div.querySelector('.delete-scale');
+        const exportBtn = div.querySelector('.export-scale');
+
+        exportBtn.onclick = (e) => {
+            e.stopPropagation();
+            exportScaleToFile(scale);
+        };
 
         editBtn.onclick = (e) => {
             e.stopPropagation();
@@ -414,6 +442,14 @@ function openCustomModal(editScale = null, isClone = false) {
         } else {
             delete customModal.dataset.editId;
         }
+        
+        // Preserve layout if editing or cloning
+        if (editScale.layout) {
+            customModal.dataset.layout = JSON.stringify(editScale.layout);
+        } else {
+            delete customModal.dataset.layout;
+        }
+
         nameInput.value = isClone ? `${editScale.name} (Custom)` : editScale.name;
         topInput.value = editScale.top.join(' ');
 
@@ -424,6 +460,7 @@ function openCustomModal(editScale = null, isClone = false) {
         bottomInput.value = bottomStr;
     } else {
         delete customModal.dataset.editId;
+        delete customModal.dataset.layout;
         nameInput.value = '';
         topInput.value = '';
         bottomInput.value = '';
@@ -459,12 +496,15 @@ function handleCustomSave() {
     const editId = customModal.dataset.editId;
     const isEdit = !!editId;
     const id = isEdit ? editId : `custom-${Date.now()}`;
+    const layoutJson = customModal.dataset.layout;
+    const layout = layoutJson ? JSON.parse(layoutJson) : null;
 
     const scale = {
         id,
         name,
         top: topFull,
-        bottom
+        bottom,
+        ...(layout ? { layout } : {})
     };
 
     const savedScale = saveCustomScale(id, scale);
@@ -481,4 +521,39 @@ function handleCustomSave() {
             openLayoutEditor(scale);
         }, 500); 
     }
+}
+
+// --- Backup & Restore Logic ---
+
+function triggerScaleImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const scale = JSON.parse(event.target.result);
+                if (!scale.name || !scale.top) {
+                    throw new Error('Invalid file format. Missing scale name or notes.');
+                }
+
+                // Give it a fresh ID to avoid accidental overwrites of existing ones
+                const newId = `custom-${Date.now()}`;
+                scale.id = newId;
+
+                const savedScale = saveCustomScale(newId, scale);
+                
+                // Switch to this scale immediately as requested
+                selectScale(savedScale);
+            } catch (err) {
+                alert('Failed to import scale: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 }
