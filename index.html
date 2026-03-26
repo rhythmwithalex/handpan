@@ -679,7 +679,11 @@
     <div id="save-comp-modal" class="modal-overlay" style="display: none; z-index: 2100;">
         <div class="modal-content glass-card" style="max-width: 400px;">
             <div class="modal-header">
-                <h2>Save Composition</h2>
+                <h2 style="margin:0;">Save Composition</h2>
+                <div style="display: flex; gap: 8px; margin-left: auto; margin-right: 35px;">
+                    <button id="export-current-json-btn" class="glass-btn-small" title="Export Current to JSON">Export Current 📥</button>
+                    <button id="export-library-json-btn" class="glass-btn-small" title="Export Library to JSON">Export All 📥</button>
+                </div>
                 <button id="close-save-comp" class="close-btn">&times;</button>
             </div>
             <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -705,14 +709,47 @@
     <div id="load-comp-modal" class="modal-overlay" style="display: none; z-index: 2100;">
         <div class="modal-content glass-card"
             style="max-width: 500px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-header">
-                <h2>Load Composition</h2>
+            <div class="modal-header" style="flex-wrap: wrap; gap: 10px;">
+                <h2 style="margin: 0;">Load Composition</h2>
+                <div style="display: flex; gap: 8px; margin-left: auto; margin-right: 35px;">
+                    <button id="import-library-json-btn" class="glass-btn-small" title="Import Library from JSON">Import 📤</button>
+                    <input type="file" id="import-library-file-input" style="display: none;" accept=".json">
+                </div>
                 <button id="close-load-comp" class="close-btn">&times;</button>
             </div>
             <div class="modal-body" style="flex: 1; overflow-y: auto; padding-right: 10px;">
                 <div id="compositions-list" style="display: flex; flex-direction: column; gap: 15px;">
                     <!-- Categories and items injected here -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Choice Modal (Append vs Replace) -->
+    <div id="import-choice-modal" class="modal-overlay" style="display: none; z-index: 3000;">
+        <div class="modal-content glass-card" style="max-width: 500px; width: 95%; padding: 30px;">
+            <div class="modal-header" style="justify-content: center; margin-bottom: 25px;">
+                <h2 style="margin: 0; font-size: 1.8rem; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Import Composition</h2>
+            </div>
+            <div class="modal-body">
+                <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px; font-size: 1.1rem;">How would you like to import this composition?</p>
+                
+                <div class="choice-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <button id="import-append-btn" class="choice-card-btn">
+                        <div class="choice-icon">＋</div>
+                        <div class="choice-label">Append</div>
+                        <div class="choice-desc">Add to the end of your current phrases</div>
+                    </button>
+                    
+                    <button id="import-replace-btn" class="choice-card-btn accent">
+                        <div class="choice-icon">⟳</div>
+                        <div class="choice-label">Replace</div>
+                        <div class="choice-desc">Clear current and load new session</div>
+                    </button>
+                </div>
+            </div>
+            <div style="margin-top: 30px; text-align: center;">
+                <button id="close-import-choice" class="secondary-btn" style="opacity: 0.7;">Cancel Import</button>
             </div>
         </div>
     </div>

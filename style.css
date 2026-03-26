@@ -2446,3 +2446,60 @@ body:not(.dark-mode) .premium-btn-small {
     user-select: none;
     -webkit-user-select: none;
 }
+/* Import Choice Modal Styles */
+.choice-card-btn {
+    background: var(--btn-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 25px 15px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-main);
+    text-align: center;
+    width: 100%;
+}
+
+.choice-card-btn:hover {
+    background: rgba(0, 184, 148, 0.1);
+    transform: translateY(-5px);
+    box-shadow: var(--glass-shadow);
+    border-color: var(--accent-color);
+}
+
+.choice-card-btn.accent:hover {
+    background: rgba(118, 75, 162, 0.1);
+    border-color: #764ba2;
+}
+
+.choice-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    margin-bottom: 5px;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.choice-card-btn.accent .choice-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.choice-label {
+    font-weight: 700;
+    font-size: 1.3rem;
+    font-family: var(--font-heading);
+}
+
+.choice-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}

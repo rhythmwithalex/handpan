@@ -12,7 +12,7 @@ import { initEditor, openEditor } from './ui/editor.js';
 import { initInspirations } from './ui/inspirations.js';
 import { initGridEditor, openGridEditor, closeGridEditor } from './ui/grid_editor.js';
 import { initLayoutEditor } from './ui/layout_editor.js';
-import { saveStateToLocal, loadStateFromLocal, generateShareUrl, decodeUrlData } from './data/storage.js';
+import * as storage from './data/storage.js';
 
 // Application State
 let currentScale = null;
@@ -42,7 +42,7 @@ const saveCurrentState = () => {
     }
     const bpmInput = document.getElementById('bpm-slider');
     const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
-    saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig);
+    storage.saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig);
 };
 
 const resetPrecountUI = () => {
@@ -135,7 +135,7 @@ function initApp() {
                 updateProgressionItem(newItem, data);
             }
         }
-        saveCurrentState();
+        storage.saveStateToLocal(currentScale, exportProgressionData()); // save temp session
     });
 
     initInspirations({
@@ -205,7 +205,7 @@ function initApp() {
             }
 
             const currentBpm = bpmInput ? parseInt(bpmInput.value) : 80;
-            const url = generateShareUrl(currentScale, exportProgressionData(), currentBpm, precountConfig);
+            const url = storage.generateShareUrl(currentScale, exportProgressionData(), currentBpm, precountConfig);
             navigator.clipboard.writeText(url).then(() => {
                 const originalText = shareBtn.textContent;
                 shareBtn.textContent = '✓';
@@ -238,7 +238,7 @@ function initApp() {
     const bpmSlider = document.getElementById('bpm-slider');
     if (bpmSlider) {
         bpmSlider.addEventListener('change', () => {
-            saveCurrentState();
+            storage.saveStateToLocal(currentScale, exportProgressionData()); // save temp session
         });
     }
 
@@ -353,32 +353,28 @@ function initApp() {
             const bpmInput = document.getElementById('bpm-slider');
             const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
 
-            // Optional: Import saveComposition from storage.js at top of file
-            import('./data/storage.js').then(storage => {
-                const success = storage.saveComposition(name, category, currentScale, progressionData, tempo);
-                if (success) {
-                    currentLoadedCompName = name;
-                    currentLoadedCompCategory = category;
+            const success = storage.saveComposition(name, category, currentScale, progressionData, tempo);
+            if (success) {
+                currentLoadedCompName = name;
+                currentLoadedCompCategory = category;
 
-                    const modal = document.getElementById('save-comp-modal');
-                    if (modal) modal.style.display = 'none';
-                    document.getElementById('modal-overlay').style.display = 'none';
+                const modal = document.getElementById('save-comp-modal');
+                if (modal) modal.style.display = 'none';
+                document.getElementById('modal-overlay').style.display = 'none';
 
-                    const originalText = saveCompBtn.textContent;
-                    saveCompBtn.textContent = '✓';
-                    setTimeout(() => saveCompBtn.textContent = originalText, 1500);
-                } else {
-                    alert("Failed to save composition.");
-                }
-            });
+                const originalText = saveCompBtn.textContent;
+                saveCompBtn.textContent = '✓';
+                setTimeout(() => saveCompBtn.textContent = originalText, 1500);
+            } else {
+                alert("Failed to save composition.");
+            }
         });
     }
 
     const loadCompBtn = document.getElementById('load-comp-btn');
     if (loadCompBtn) {
         loadCompBtn.addEventListener('click', () => {
-            import('./data/storage.js').then(storage => {
-                const compositions = storage.getCompositions();
+            const compositions = storage.getCompositions();
                 const listContainer = document.getElementById('compositions-list');
                 listContainer.innerHTML = '';
 
@@ -413,7 +409,9 @@ function initApp() {
                                     <div class="scale-name" style="font-size: 1.05rem;">${comp.name}</div>
                                     <div class="scale-notes" style="font-size: 0.85rem; margin-top: 4px;">Structure: ${comp.scale.name} • ${comp.progression.length} parts • ${comp.tempo} BPM</div>
                                 </div>
-                                <div class="scale-actions">
+                                <div class="scale-actions" style="display: flex; gap: 5px;">
+                                    <button class="icon-btn append-comp" title="Add to End (+)" style="background: rgba(46, 204, 113, 0.2); color: #27ae60; border: 1px solid rgba(46, 204, 113, 0.3);">＋</button>
+                                    <button class="icon-btn export-single-comp" title="Export as JSON" style="opacity: 0.7;">📥</button>
                                     <button class="icon-btn delete-comp" title="Delete">🗑</button>
                                 </div>
                             `;
@@ -428,10 +426,25 @@ function initApp() {
                                     return;
                                 }
 
-                                // Load it
-                                loadScale(comp.scale, true);
-                                loadProgressionData(comp.progression);
-                                updateBpmUI(comp.tempo);
+                                if (e.target.closest('.export-single-comp')) {
+                                    e.stopPropagation();
+                                    storage.exportCompositionToJson(comp.id);
+                                    return;
+                                }
+
+                                const isAppend = !!e.target.closest('.append-comp');
+                                if (isAppend) {
+                                    e.stopPropagation();
+                                }
+
+                                // Load/Append it
+                                if (!isAppend) {
+                                    loadScale(comp.scale, true);
+                                    updateBpmUI(comp.tempo);
+                                    currentLoadedCompName = comp.name;
+                                    currentLoadedCompCategory = comp.category;
+                                }
+                                loadProgressionData(comp.progression, isAppend);
 
                                 // Track the loaded composition details
                                 currentLoadedCompName = comp.name;
@@ -455,18 +468,157 @@ function initApp() {
                     modal.style.display = 'flex';
                 }
             });
-        });
+        }
+
+    // Global Export/Import Listeners (Relocated)
+    const exportLibraryBtn = document.getElementById('export-library-json-btn');
+    const exportCurrentBtn = document.getElementById('export-current-json-btn');
+    const importLibraryBtn = document.getElementById('import-library-json-btn');
+    const importFileInput = document.getElementById('import-library-file-input');
+
+    if (exportLibraryBtn) {
+        exportLibraryBtn.onclick = () => storage.exportLibraryToJson();
+    }
+
+    if (exportCurrentBtn) {
+        exportCurrentBtn.onclick = () => {
+            const nameInput = document.getElementById('save-comp-name');
+            const catInput = document.getElementById('save-comp-category');
+            let name = nameInput?.value.trim();
+            let category = catInput?.value.trim();
+
+            if (!name) {
+                name = prompt("Please enter a name for your export:", "My Handpan Composition");
+                if (!name) return; // User Cancelled
+                if (nameInput) nameInput.value = name;
+            }
+
+            if (!category) {
+                category = prompt("Please enter a category for your export:", "My Phrases");
+                if (!category) return; // User Cancelled
+                if (catInput) catInput.value = category;
+            }
+
+            const currentBpm = document.getElementById('bpm-slider') ? parseInt(document.getElementById('bpm-slider').value) : 80;
+            
+            // Collect full precount/playback config (same as share/save)
+            const precountSelect = document.getElementById('precount-select');
+            let precountConfig = { value: '0' };
+            if (precountSelect) {
+                precountConfig.value = precountSelect.value;
+                if (precountSelect.value === 'custom') {
+                    try {
+                        const saved = localStorage.getItem('customPrecountPattern');
+                        if (saved) precountConfig.data = JSON.parse(saved);
+                    } catch (e) { }
+                }
+            }
+            const eachTimeToggle = document.getElementById('precount-each-time');
+            if (eachTimeToggle) precountConfig.eachTime = eachTimeToggle.checked;
+            const loopToggle = document.getElementById('playback-loop');
+            if (loopToggle) precountConfig.loop = loopToggle.checked;
+
+            const currentData = {
+                id: 'current_session_' + Date.now(),
+                name: name,
+                category: category,
+                scale: currentScale,
+                tempo: currentBpm,
+                precount: precountConfig, // Added precount metadata
+                progression: exportProgressionData(),
+                date: new Date().toISOString()
+            };
+            const dataStr = JSON.stringify(currentData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const safeName = currentData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            link.download = `handpan_comp_${safeName}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+    }
+
+    if (importLibraryBtn && importFileInput) {
+        importLibraryBtn.onclick = () => importFileInput.click();
+        importFileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const result = storage.importLibraryFromJson(event.target.result);
+                if (result.success) {
+                    if (result.count === 1 && result.imported) {
+                        const comp = result.imported;
+                        
+                        // Show Premium Choice Modal
+                        const choiceModal = document.getElementById('import-choice-modal');
+                        const appendBtn = document.getElementById('import-append-btn');
+                        const replaceBtn = document.getElementById('import-replace-btn');
+                        const closeBtn = document.getElementById('close-import-choice');
+                        const overlay = document.getElementById('modal-overlay');
+
+                        if (choiceModal && overlay) {
+                            overlay.style.display = 'block';
+                            choiceModal.style.display = 'flex';
+
+                            const cleanup = () => {
+                                choiceModal.style.display = 'none';
+                                overlay.style.display = 'none';
+                                appendBtn.onclick = null;
+                                replaceBtn.onclick = null;
+                                closeBtn.onclick = null;
+
+                                // Also close the parent Load modal
+                                const loadModal = document.getElementById('load-comp-modal');
+                                if (loadModal) loadModal.style.display = 'none';
+                            };
+
+                            appendBtn.onclick = () => {
+                                cleanup();
+                                loadProgressionData(comp.progression, true);
+                            };
+
+                            replaceBtn.onclick = () => {
+                                cleanup();
+                                loadScale(comp.scale, true);
+                                if (comp.tempo) updateBpmUI(comp.tempo);
+                                loadProgressionData(comp.progression, false);
+                            };
+
+                            closeBtn.onclick = () => {
+                                cleanup();
+                            };
+                        }
+                    } else {
+                        alert(`Successfully imported ${result.count} compositions to library!`);
+                        // Reload list if load modal is open
+                        const loadModal = document.getElementById('load-comp-modal');
+                        if (loadModal && loadModal.style.display !== 'none') {
+                            loadCompBtn.click();
+                        }
+                    }
+                } else {
+                    alert("Import failed: " + result.error);
+                }
+            };
+            reader.readAsText(file);
+            importFileInput.value = ''; // reset
+        };
     }
 
     // 8. Initial Load (URL -> LocalStorage -> Default)
     const bpmValue = document.getElementById('bpm-value');
-    const updateBpmUI = (tempo) => {
+    function updateBpmUI(tempo) {
         if (bpmSlider) bpmSlider.value = tempo;
         if (bpmValue) bpmValue.textContent = tempo;
         setTempo(tempo);
-    };
+    }
 
-    const urlData = decodeUrlData();
+    const urlData = storage.decodeUrlData();
     if (urlData) {
         // Load from URL
         loadScale(urlData.scale, true);
@@ -478,7 +630,7 @@ function initApp() {
         // Clean up URL without reloading
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-        const localData = loadStateFromLocal();
+        const localData = storage.loadStateFromLocal();
         if (localData && localData.scale) {
             loadScale(localData.scale, true);
             if (localData.progression) {

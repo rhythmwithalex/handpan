@@ -206,7 +206,7 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
     }
 }
 
-export function updateProgressionItem(item, data) {
+export function updateProgressionItem(item, data, silent = false) {
     // data = { name, text, repeats }
     const label = item.querySelector('.prog-label');
     if (label) label.textContent = data.name;
@@ -235,7 +235,7 @@ export function updateProgressionItem(item, data) {
 
     renderRepeatsBadge(item, data.repeats);
 
-    if (dependencies.onUpdate) dependencies.onUpdate();
+    if (!silent && dependencies.onUpdate) dependencies.onUpdate();
 }
 
 function renderItemDOM(item, label, notesHTML) {
@@ -476,8 +476,13 @@ export function clearProgression(triggerSave = true) {
     if (triggerSave && dependencies.onUpdate) dependencies.onUpdate();
 }
 
-export function loadProgressionData(dataArray) {
-    clearProgression(false); // don't trigger save during load
+export function loadProgressionData(dataArray, append = false) {
+    if (!append) {
+        clearProgression(false); // don't trigger save during load
+    } else {
+        // When appending, explicitly stop playback to avoid sequence mismatch
+        if (dependencies.stopPlayback) dependencies.stopPlayback();
+    }
     if (!dataArray || !Array.isArray(dataArray)) return;
 
     dataArray.forEach(item => {
@@ -489,20 +494,25 @@ export function loadProgressionData(dataArray) {
         }
         addChordToProgression(null, parsedNotes, item.name, item.text);
 
-        // Apply repeats and mute if needed
+        // Apply repeats and force unmute
         if (stageContainer) {
             const addedItem = stageContainer.lastElementChild;
             if (addedItem && addedItem.classList.contains('progression-item')) {
+                // Force every item to be unmuted regardless of saved data
+                addedItem.dataset.muted = 'false';
+                
                 if (item.repeats > 1) {
                     addedItem.dataset.repeats = item.repeats;
                 }
-                if (item.muted === true) {
-                    addedItem.dataset.muted = 'true';
-                }
-                updateProgressionItem(addedItem, item);
+                
+                // Call update with silent=true to skip per-item auto-saves
+                updateProgressionItem(addedItem, { ...item, muted: false }, true);
             }
         }
     });
+
+    // NOTE: Removed final onUpdate() call to respect user's request:
+    // "принудительное сохранение в localStorage отставить, пусть сохранение происзодит только тогда, когда этого хочет пользователь."
 }
 
 function handleDragOver(e) {

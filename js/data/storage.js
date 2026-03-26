@@ -150,3 +150,79 @@ export function deleteComposition(id) {
         return false;
     }
 }
+
+export function exportLibraryToJson() {
+    const library = getCompositions();
+    const dataStr = JSON.stringify(library, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `handpan_library_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+export function exportCompositionToJson(id) {
+    const library = getCompositions();
+    const comp = library.find(c => c.id === id);
+    if (!comp) return;
+
+    const dataStr = JSON.stringify(comp, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    const safeName = comp.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.download = `handpan_comp_${safeName}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+export function importLibraryFromJson(jsonString) {
+    try {
+        let imported = JSON.parse(jsonString);
+        
+        // Flexibly handle single object or array
+        if (!Array.isArray(imported)) {
+            if (imported.id && imported.name && imported.progression) {
+                imported = [imported];
+            } else {
+                throw new Error("Invalid format: Expected a composition or library array.");
+            }
+        }
+        
+        // Basic validation of items
+        const validItems = imported.filter(item => item.id && item.name && item.progression);
+        if (validItems.length === 0 && imported.length > 0) {
+            throw new Error("No valid compositions found in file.");
+        }
+
+        const currentLibrary = getCompositions();
+        const merged = [...currentLibrary];
+        validItems.forEach(newItem => {
+            const index = merged.findIndex(c => c.id === newItem.id);
+            if (index !== -1) {
+                merged[index] = newItem; // Overwrite
+            } else {
+                merged.push(newItem); // Append
+            }
+        });
+
+        localStorage.setItem(LIBRARY_KEY, JSON.stringify(merged));
+        return { 
+            success: true, 
+            count: validItems.length, 
+            imported: validItems.length === 1 ? validItems[0] : null 
+        };
+    } catch (e) {
+        console.error("Error importing library:", e);
+        return { success: false, error: e.message };
+    }
+}
