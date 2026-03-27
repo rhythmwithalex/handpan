@@ -1267,21 +1267,19 @@ body:not(.dark-mode) .premium-btn-small {
 }
 
 .progression-stage {
-    min-height: 100px;
+    min-height: 80px;
+    max-height: 340px;
+    overflow-y: auto;
     background: var(--glass-bg);
     border-radius: 20px;
     border: 1px dashed var(--glass-border);
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    /* Allow wrapping */
     justify-content: flex-start;
     align-items: flex-start;
-    /* Align to top when wrapped */
     gap: 15px;
-    padding: 20px;
-    /* overflow-x: auto; Removed for wrapping */
-    /* white-space: nowrap; Removed for wrapping */
+    padding: 15px;
     transition: background-color 0.5s ease, border-color 0.5s ease;
 }
 
@@ -2461,6 +2459,7 @@ body:not(.dark-mode) .premium-btn-small {
 #progression-stage.compact-view {
     display: flex;
     flex-direction: column;
+    flex-wrap: nowrap;
     gap: 4px;
 }
 

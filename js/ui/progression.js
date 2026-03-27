@@ -190,9 +190,7 @@ export function addChordToProgression(chord, specificNotes = null, label = null,
     renderItemDOM(item, finalLabel, headerContentNotes);
     setupItemEvents(item);
 
-    if (defaultRepeats > 1) {
-        renderRepeatsBadge(item, defaultRepeats);
-    }
+    renderRepeatsBadge(item, defaultRepeats);
 
     if (stageContainer) {
         const placeholder = stageContainer.querySelector('.placeholder-text');
@@ -334,7 +332,9 @@ function renderItemDOM(item, label, notesHTML) {
         e.stopPropagation();
         const currentNotes = item.dataset.notes ? JSON.parse(item.dataset.notes) : [];
         const currentRaw = item.dataset.sourceText;
-        addChordToProgression({ name: "Copy", notes: [] }, currentNotes, undefined, currentRaw);
+        const color = item.dataset.color || 'none';
+        const repeats = item.dataset.repeats ? parseInt(item.dataset.repeats) : 1;
+        addChordToProgression({ name: "Copy", notes: [] }, currentNotes, undefined, currentRaw, repeats, false, color);
         if (dependencies.onUpdate) dependencies.onUpdate();
     };
 
@@ -467,7 +467,7 @@ function renderRepeatsBadge(item, repeats) {
         b.style.opacity = '1';
     } else {
         // Show x1 slightly faded out so user knows they can interact with it
-        b.style.opacity = '0.3';
+        b.style.opacity = '0.7';
         item.dataset.repeats = 1; // ensure state is clean
     }
 }
@@ -499,27 +499,37 @@ export function loadProgressionData(dataArray, append = false) {
     if (!dataArray || !Array.isArray(dataArray)) return;
 
     dataArray.forEach(item => {
-        if (!item.text) return;
+        if (item.text === undefined) return;
         const currentScale = dependencies.getScale ? dependencies.getScale() : null;
         let parsedNotes = [];
-        if (dependencies.parseText && currentScale) {
+        if (item.text && dependencies.parseText && currentScale) {
             parsedNotes = dependencies.parseText(item.text, currentScale);
         }
-        addChordToProgression(null, parsedNotes, item.name, item.text);
+        
+        // Pass repeats and color cleanly upon creation
+        addChordToProgression(null, parsedNotes, item.name, item.text, item.repeats || 1, false, item.color || 'none');
 
-        // Apply repeats and force unmute
+        // Apply visual states and muted properties
         if (stageContainer) {
             const addedItem = stageContainer.lastElementChild;
             if (addedItem && addedItem.classList.contains('progression-item')) {
-                addedItem.dataset.color = item.color || 'none';
-                addedItem.dataset.muted = 'false';
+                addedItem.dataset.muted = item.muted ? 'true' : 'false';
                 
-                if (item.repeats > 1) {
-                    addedItem.dataset.repeats = item.repeats;
+                const muteBtn = addedItem.querySelector('.mute-btn');
+                if (muteBtn) {
+                    if (item.muted) {
+                        muteBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+                        muteBtn.title = "Unmute";
+                        addedItem.classList.add('muted');
+                    } else {
+                        muteBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+                        muteBtn.title = "Mute";
+                        addedItem.classList.remove('muted');
+                    }
                 }
                 
-                // Call update with silent=true to skip per-item auto-saves
-                updateProgressionItem(addedItem, { ...item, muted: false, color: item.color || 'none' }, true);
+                // Keep properties cleanly synced internally (no auto-saves)
+                updateProgressionItem(addedItem, { ...item, muted: item.muted || false, color: item.color || 'none' }, true);
             }
         }
     });
@@ -530,7 +540,8 @@ export function loadProgressionData(dataArray, append = false) {
 
 function handleDragOver(e) {
     e.preventDefault();
-    const afterElement = getDragAfterElement(stageContainer, e.clientX);
+    const isCompact = stageContainer.classList.contains('compact-view');
+    const afterElement = getDragAfterElement(stageContainer, e.clientX, e.clientY, isCompact);
     const draggable = document.querySelector('.dragging');
     if (draggable) {
         if (afterElement == null) {
@@ -541,12 +552,30 @@ function handleDragOver(e) {
     }
 }
 
-function getDragAfterElement(container, x) {
+function getDragAfterElement(container, x, y, isCompact) {
     const draggableElements = [...container.querySelectorAll('.progression-item:not(.dragging)')];
 
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
-        const offset = x - box.left - box.width / 2;
+        
+        let offset;
+        if (isCompact) {
+            // Vertical movement priority
+            offset = y - box.top - box.height / 2;
+        } else {
+            // Horizontal movement priority
+            // For multi-row grids, we should also check if the mouse is roughly on the same row,
+            // but keeping original functionality for horizontal alignment.
+            const rowDiff = y - (box.top + box.height / 2);
+            if (Math.abs(rowDiff) > box.height) {
+                // Not on the same row, but we can't easily position purely by X.
+                // Just use a large penalty to prioritize elements on the same row.
+                offset = (x - box.left - box.width / 2) - (Math.abs(rowDiff) * 10);
+            } else {
+                offset = x - box.left - box.width / 2;
+            }
+        }
+
         if (offset < 0 && offset > closest.offset) {
             return { offset: offset, element: child };
         } else {
