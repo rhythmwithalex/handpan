@@ -2,13 +2,14 @@
 
 const STORAGE_KEY = 'handpan_app_progression';
 
-export function saveStateToLocal(scale, progressionItemsData, tempo, precount) {
+export function saveStateToLocal(scale, progressionItemsData, tempo, precount, viewMode) {
     if (!scale || !progressionItemsData) return;
     const data = {
         scale: scale,
         progression: progressionItemsData,
         tempo: tempo || 80,
-        precount: precount
+        precount: precount,
+        viewMode: viewMode || 'grid'
     };
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -29,17 +30,19 @@ export function loadStateFromLocal() {
     return null;
 }
 
-export function generateShareUrl(scale, progressionItemsData, tempo, precount) {
+export function generateShareUrl(scale, progressionItemsData, tempo, precount, viewMode) {
     if (!scale || !progressionItemsData) return window.location.href.split('?')[0];
 
     const data = {
         s: scale, // Use short keys to save space in URL
         t: tempo || 80, // Tempo
         pr: precount, // Precount config
+        vm: viewMode === 'compact' ? 1 : 0,
         p: progressionItemsData.map(item => ({
             n: item.name,      // name
             t: item.text,      // original text
-            r: item.repeats    // repeats
+            r: item.repeats,   // repeats
+            c: item.color !== 'none' ? item.color : undefined
         }))
     };
 
@@ -72,13 +75,15 @@ export function decodeUrlData() {
         const scale = parsed.s;
         const tempo = parsed.t || 80;
         const precount = parsed.pr;
+        const viewMode = parsed.vm === 1 ? 'compact' : 'grid';
         const progression = parsed.p ? parsed.p.map(item => ({
             name: item.n || item.name,
             text: item.t || item.text,
-            repeats: item.r || item.repeats || 1
+            repeats: item.r || item.repeats || 1,
+            color: item.c || item.color || 'none'
         })) : [];
 
-        return { scale, progression, tempo, precount };
+        return { scale, progression, tempo, precount, viewMode };
 
     } catch (e) {
         console.error("Error decoding URL data:", e);

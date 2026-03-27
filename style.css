@@ -1390,14 +1390,26 @@ body:not(.dark-mode) .premium-btn-small {
     border-color: transparent;
 }
 
-.progression-item .remove-btn {
+.progression-item .repeat-badge {
     position: absolute;
-    top: 5px;
+    bottom: 5px;
     right: 8px;
+    background: transparent;
+    color: #000;
+    font-size: 0.9rem;
+    font-weight: 800;
+    transition: opacity 0.2s;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* Helps legibility if background is dark */
+
+    transition: opacity 0.2s;
+}
+
+.progression-item .remove-btn {
     cursor: pointer;
     font-size: 1.2rem;
     color: var(--text-muted);
     line-height: 1;
+    margin-right: 8px;
     transition: opacity 0.2s;
 }
 
@@ -1425,25 +1437,7 @@ body:not(.dark-mode) .premium-btn-small {
     color: #fff;
 }
 
-.progression-item .repeat-badge {
-    position: absolute;
-    top: 8px;
-    /* Moved to top to avoid note overlap */
-    right: 30px;
-    /* Left of the close button */
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--accent-color);
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: bold;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    pointer-events: auto;
-    user-select: none;
-    touch-action: none;
-    /* Prevent browser scrolling when swiping on the badge */
-    /* Let clicks pass through if needed, but we now process them */
-}
+
 
 /* Modal Base Styles */
 .modal-overlay {
@@ -2442,10 +2436,131 @@ body:not(.dark-mode) .premium-btn-small {
     to { stroke-dashoffset: 0; }
 }
 
-#handpan-svg, #layout-editor-svg {
-    user-select: none;
-    -webkit-user-select: none;
+/* Card Coloring & Compact View */
+:root {
+    --card-red: rgba(255, 107, 107, 0.4);
+    --card-orange: rgba(255, 159, 67, 0.4);
+    --card-yellow: rgba(255, 201, 71, 0.4);
+    --card-green: rgba(29, 209, 161, 0.4);
+    --card-blue: rgba(84, 160, 255, 0.4);
+    --card-purple: rgba(95, 39, 205, 0.4);
+    --card-pink: rgba(255, 159, 243, 0.4);
+    --card-cyan: rgba(72, 219, 251, 0.4);
 }
+
+.progression-item[data-color="red"] { background: var(--card-red) !important; border-color: rgba(255, 107, 107, 0.4); }
+.progression-item[data-color="orange"] { background: var(--card-orange) !important; border-color: rgba(255, 159, 67, 0.4); }
+.progression-item[data-color="yellow"] { background: var(--card-yellow) !important; border-color: rgba(255, 201, 71, 0.4); }
+.progression-item[data-color="green"] { background: var(--card-green) !important; border-color: rgba(29, 209, 161, 0.4); }
+.progression-item[data-color="blue"] { background: var(--card-blue) !important; border-color: rgba(84, 160, 255, 0.4); }
+.progression-item[data-color="purple"] { background: var(--card-purple) !important; border-color: rgba(95, 39, 205, 0.4); }
+.progression-item[data-color="pink"] { background: var(--card-pink) !important; border-color: rgba(255, 159, 243, 0.4); }
+.progression-item[data-color="cyan"] { background: var(--card-cyan) !important; border-color: rgba(72, 219, 251, 0.4); }
+
+/* Compact View overrides */
+#progression-stage.compact-view {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#progression-stage.compact-view .progression-item {
+    height: 32px;
+    width: 100%;
+    margin: 0;
+    padding: 2px 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 6px;
+}
+
+#progression-stage.compact-view .prog-header {
+    display: contents;
+}
+
+#progression-stage.compact-view .prog-header > div:first-child {
+    order: 1;
+}
+
+#progression-stage.compact-view .prog-info {
+    order: 2;
+    flex-grow: 1;
+    margin-left: 15px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#progression-stage.compact-view .prog-notes {
+    display: flex;
+    gap: 4px;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+
+
+#progression-stage.compact-view .remove-btn {
+    position: static;
+    font-size: 1.2rem;
+    margin-left: 0;
+    margin-right: 8px;
+}
+
+#progression-stage.compact-view .repeat-badge {
+    position: static;
+    order: 4;
+    margin-left: 10px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    line-height: 20px;
+}
+
+#progression-stage.compact-view .card-action-btn {
+    padding: 2px 4px;
+    font-size: 0.7rem;
+}
+
+/* Toolbar palette */
+.color-palette {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    background: var(--glass-bg);
+    padding: 4px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+}
+
+.color-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.color-swatch:hover {
+    transform: scale(1.2);
+}
+
+.color-swatch.active {
+    border-color: var(--text-main);
+    transform: scale(1.1);
+}
+
+.swatch-none { background: transparent; border: 1px solid var(--text-muted); position: relative; }
+.swatch-none::after { content: ''; position: absolute; width: 100%; height: 1px; background: red; transform: rotate(45deg); top: 50%; left: 0;}
+.swatch-red { background: var(--card-red); }
+.swatch-orange { background: var(--card-orange); }
+.swatch-yellow { background: var(--card-yellow); }
+.swatch-green { background: var(--card-green); }
+.swatch-blue { background: var(--card-blue); }
+.swatch-purple { background: var(--card-purple); }
+.swatch-pink { background: var(--card-pink); }
+.swatch-cyan { background: var(--card-cyan); }
 /* Import Choice Modal Styles */
 .choice-card-btn {
     background: var(--btn-bg);

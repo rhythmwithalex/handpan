@@ -77,16 +77,18 @@ export function exportProgressionData() {
         const text = item.dataset.sourceText || '';
         const repeats = item.dataset.repeats ? parseInt(item.dataset.repeats) : 1;
         const muted = item.dataset.muted === 'true';
-        data.push({ name, text, repeats, muted });
+        const color = item.dataset.color || 'none';
+        data.push({ name, text, repeats, muted, color });
     });
 
     return data;
 }
 
-export function addChordToProgression(chord, specificNotes = null, label = null, rawText = null, defaultRepeats = 1, isSimultaneous = false) {
+export function addChordToProgression(chord, specificNotes = null, label = null, rawText = null, defaultRepeats = 1, isSimultaneous = false, color = 'none') {
     const item = document.createElement('div');
     item.className = 'progression-item glass-card-small';
     item.draggable = true;
+    item.dataset.color = color;
     if (defaultRepeats > 1) {
         item.dataset.repeats = defaultRepeats;
     }
@@ -251,8 +253,25 @@ function renderItemDOM(item, label, notesHTML) {
     titleContainer.style.cursor = 'pointer';
     titleContainer.onclick = (e) => {
         e.stopPropagation();
-        dependencies.openEditor(item);
+        
+        const activeColor = dependencies.getActiveColor ? dependencies.getActiveColor() : 'none';
+        if (activeColor !== 'none') {
+            item.dataset.color = activeColor;
+            if (dependencies.onUpdate) dependencies.onUpdate();
+        } else {
+            dependencies.openEditor(item);
+        }
     };
+
+    // Make the entire card paintable
+    item.addEventListener('click', (e) => {
+        const activeColor = dependencies.getActiveColor ? dependencies.getActiveColor() : 'none';
+        if (activeColor !== 'none') {
+            e.stopPropagation();
+            item.dataset.color = activeColor;
+            if (dependencies.onUpdate) dependencies.onUpdate();
+        }
+    });
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'prog-label';
@@ -332,16 +351,6 @@ function renderItemDOM(item, label, notesHTML) {
         if (dependencies.openGridEditor) dependencies.openGridEditor(item);
     };
 
-    titleContainer.appendChild(titleSpan);
-    titleContainer.appendChild(muteBtn);
-    titleContainer.appendChild(editIcon);
-    titleContainer.appendChild(gridBtn);
-    titleContainer.appendChild(duplicateBtn);
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.display = 'flex';
-    actionsDiv.style.gap = '10px'; // Increase gap from 5px to 10px
-
     const removeSpan = document.createElement('span');
     removeSpan.className = 'remove-btn';
     removeSpan.innerHTML = '&times;';
@@ -352,10 +361,14 @@ function renderItemDOM(item, label, notesHTML) {
         if (dependencies.onUpdate) dependencies.onUpdate();
     };
 
-    actionsDiv.appendChild(removeSpan);
+    titleContainer.appendChild(removeSpan);
+    titleContainer.appendChild(titleSpan);
+    titleContainer.appendChild(muteBtn);
+    titleContainer.appendChild(editIcon);
+    titleContainer.appendChild(gridBtn);
+    titleContainer.appendChild(duplicateBtn);
 
     header.appendChild(titleContainer);
-    header.appendChild(actionsDiv);
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'prog-info';
@@ -498,7 +511,7 @@ export function loadProgressionData(dataArray, append = false) {
         if (stageContainer) {
             const addedItem = stageContainer.lastElementChild;
             if (addedItem && addedItem.classList.contains('progression-item')) {
-                // Force every item to be unmuted regardless of saved data
+                addedItem.dataset.color = item.color || 'none';
                 addedItem.dataset.muted = 'false';
                 
                 if (item.repeats > 1) {
@@ -506,7 +519,7 @@ export function loadProgressionData(dataArray, append = false) {
                 }
                 
                 // Call update with silent=true to skip per-item auto-saves
-                updateProgressionItem(addedItem, { ...item, muted: false }, true);
+                updateProgressionItem(addedItem, { ...item, muted: false, color: item.color || 'none' }, true);
             }
         }
     });

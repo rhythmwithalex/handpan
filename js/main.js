@@ -18,6 +18,8 @@ import * as storage from './data/storage.js';
 let currentScale = null;
 let handpanNotes = []; // Array of {note, octave, value}
 let visualizerMode = 'notes'; // 'notes', 'numbers', 'degrees'
+let activeColor = 'none';
+let isCompactView = false;
 
 // Function to trigger state save
 const saveCurrentState = () => {
@@ -42,7 +44,7 @@ const saveCurrentState = () => {
     }
     const bpmInput = document.getElementById('bpm-slider');
     const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
-    storage.saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig);
+    storage.saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig, isCompactView ? 'compact' : 'grid');
 };
 
 const resetPrecountUI = () => {
@@ -100,17 +102,38 @@ function initApp() {
         });
     }
 
-    const phraseSizeSlider = document.getElementById('phrase-size-slider');
-    const phraseSizeDisplay = document.getElementById('phrase-size-value');
-    if (phraseSizeSlider) {
-        phraseSizeSlider.addEventListener('input', (e) => {
-            if (phraseSizeDisplay) phraseSizeDisplay.textContent = e.target.value;
+    const palette = document.querySelector('.color-palette');
+    const swatches = document.querySelectorAll('.color-swatch');
+    if (swatches.length > 0) {
+        swatches.forEach(swatch => {
+            swatch.onclick = () => {
+                swatches.forEach(s => s.classList.remove('active'));
+                swatch.classList.add('active');
+                activeColor = swatch.dataset.color;
+            };
         });
+    }
+
+    const toggleViewBtn = document.getElementById('toggle-view-btn');
+    const stage = document.getElementById('progression-stage');
+    if (toggleViewBtn && stage) {
+        toggleViewBtn.onclick = () => {
+            isCompactView = !isCompactView;
+            if (isCompactView) {
+                stage.classList.add('compact-view');
+                toggleViewBtn.textContent = '⊞';
+            } else {
+                stage.classList.remove('compact-view');
+                toggleViewBtn.textContent = '≡';
+            }
+            saveCurrentState();
+        };
     }
 
     initProgressionUI('progression-stage', {
         openEditor: (item, defaultName) => openEditor(item, defaultName, currentScale),
         openGridEditor: (phraseString, itemId) => openGridEditor(phraseString, itemId),
+        getActiveColor: () => activeColor,
         onUpdate: () => {
             saveCurrentState();
         },
@@ -205,7 +228,7 @@ function initApp() {
             }
 
             const currentBpm = bpmInput ? parseInt(bpmInput.value) : 80;
-            const url = storage.generateShareUrl(currentScale, exportProgressionData(), currentBpm, precountConfig);
+            const url = storage.generateShareUrl(currentScale, exportProgressionData(), currentBpm, precountConfig, isCompactView ? 'compact' : 'grid');
             navigator.clipboard.writeText(url).then(() => {
                 const originalText = shareBtn.textContent;
                 shareBtn.textContent = '✓';
@@ -620,7 +643,13 @@ function initApp() {
 
     const urlData = storage.decodeUrlData();
     if (urlData) {
-        // Load from URL
+        if (urlData.viewMode === 'compact') {
+            isCompactView = true;
+            const stage = document.getElementById('progression-stage');
+            const toggleViewBtn = document.getElementById('toggle-view-btn');
+            if (stage) stage.classList.add('compact-view');
+            if (toggleViewBtn) toggleViewBtn.textContent = '⊞';
+        }
         loadScale(urlData.scale, true);
         loadProgressionData(urlData.progression);
         if (urlData.tempo) updateBpmUI(urlData.tempo);
@@ -631,7 +660,14 @@ function initApp() {
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
         const localData = storage.loadStateFromLocal();
-        if (localData && localData.scale) {
+        if (localData) {
+            if (localData.viewMode === 'compact') {
+                isCompactView = true;
+                const stage = document.getElementById('progression-stage');
+                const toggleViewBtn = document.getElementById('toggle-view-btn');
+                if (stage) stage.classList.add('compact-view');
+                if (toggleViewBtn) toggleViewBtn.textContent = '⊞';
+            }
             loadScale(localData.scale, true);
             if (localData.progression) {
                 loadProgressionData(localData.progression);
