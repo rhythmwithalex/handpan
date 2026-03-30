@@ -520,19 +520,28 @@ function updateMiniHandpanUI() {
 
     if (isShowHandpan && !(isGuitarHeroMode && isPlaying)) {
         container.style.display = 'block';
-        const miniSvg = document.getElementById('grid-handpan-svg');
-        if (miniSvg) {
-            const currentScale = dependencies.getScale();
-            renderHandpanSVG(currentScale, 'notes', miniSvg, (noteName) => {
-                // Play sound
-                if (noteName === 'T' || noteName === 't') {
-                    playTak(0, noteName === 'T', noteName === 't');
-                } else {
-                    const freq = getFrequencyForNoteName(noteName);
-                    if (freq) playTone(freq, noteName);
+        
+        const wrapper = container.querySelector('div');
+        if (wrapper) {
+            let miniSvg = document.getElementById('grid-handpan-svg');
+            if (!miniSvg) {
+                wrapper.innerHTML = '<svg id="grid-handpan-svg" viewBox="0 0 500 500" style="width: 100%; height: auto; display: block;"></svg>';
+                miniSvg = document.getElementById('grid-handpan-svg');
+            }
+            if (miniSvg) {
+                const currentScale = dependencies.getScale();
+                if (currentScale) {
+                    renderHandpanSVG(currentScale, 'notes', miniSvg, (noteName) => {
+                        // Play sound
+                        if (noteName === 'T' || noteName === 't') {
+                            playTak(0, noteName === 'T', noteName === 't');
+                        } else {
+                            const freq = getFrequencyForNoteName(noteName);
+                            if (freq) playTone(freq, noteName);
+                        }
+                    });
                 }
-                // (Note insertion from handpan removed per user request)
-            });
+            }
         }
     } else {
         container.style.display = 'none';

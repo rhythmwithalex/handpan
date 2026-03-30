@@ -443,13 +443,13 @@ function createNoteG(noteName, labelText, x, y, rx, ry, angle, isDing = false, i
 
 export function highlightNote(noteName, delaySeconds = 0) {
     const cleanName = noteName.replace(/^D:/, '');
-    const el = document.getElementById(`note-${cleanName}`);
-    if (!el) return;
+    const els = document.querySelectorAll(`[data-note="${noteName}"]`); // Use exact noteName including D: if present
+    if (els.length === 0) return;
 
     const trigger = () => {
-        el.classList.add('note-active');
+        els.forEach(el => el.classList.add('note-active'));
         const offTimeout = setTimeout(() => {
-            el.classList.remove('note-active');
+            els.forEach(el => el.classList.remove('note-active'));
             visualTimeouts = visualTimeouts.filter(id => id !== offTimeout);
         }, 200);
         visualTimeouts.push(offTimeout);
@@ -464,20 +464,31 @@ export function highlightNote(noteName, delaySeconds = 0) {
 }
 
 export function highlightBody(delaySeconds = 0, isGhost = false) {
-    const boundary = document.querySelector('.kick-boundary');
-    if (!boundary) return;
+    const boundaries = document.querySelectorAll('.kick-boundary');
+    if (boundaries.length === 0) return;
 
     const trigger = () => {
-        if (isGhost) {
-            boundary.classList.add('ghost-flash');
-        } else {
-            boundary.classList.remove('ghost-flash');
-        }
-        boundary.classList.add('boundary-flash');
+        boundaries.forEach(boundary => {
+            if (isGhost) {
+                 boundary.classList.add('ghost-flash');
+            } else {
+                 boundary.classList.remove('ghost-flash');
+            }
+            boundary.classList.add('boundary-flash');
+        });
         const offTimeout = setTimeout(() => {
-            boundary.classList.remove('boundary-flash');
-            boundary.classList.remove('ghost-flash');
+            boundaries.forEach(boundary => {
+                boundary.classList.remove('boundary-flash');
+                boundary.classList.remove('ghost-flash');
+            });
             visualTimeouts = visualTimeouts.filter(id => id !== offTimeout);
+            
+            // Also clean up any lingering old references just in case there's another class added
+            const oldBoundaryFlash = document.querySelectorAll('.boundary-flash');
+            oldBoundaryFlash.forEach(b => b.classList.remove('boundary-flash'));
+            const oldGhostFlash = document.querySelectorAll('.ghost-flash');
+            oldGhostFlash.forEach(b => b.classList.remove('ghost-flash'));
+
         }, 100);
         visualTimeouts.push(offTimeout);
     };
@@ -494,5 +505,7 @@ export function resetVisuals() {
     visualTimeouts.forEach(id => clearTimeout(id));
     visualTimeouts = [];
     document.querySelectorAll('.note-active').forEach(el => el.classList.remove('note-active'));
-    document.querySelectorAll('.flash').forEach(el => el.classList.remove('flash'));
+    document.querySelectorAll('.boundary-flash, .ghost-flash, .flash').forEach(el => {
+        el.classList.remove('boundary-flash', 'ghost-flash', 'flash');
+    });
 }

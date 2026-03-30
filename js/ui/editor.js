@@ -1,5 +1,8 @@
 
 import { NOTE_TO_MIDI } from '../data/constants.js';
+import { renderHandpanSVG } from './visualizer.js';
+import { playTone, playTak } from '../audio/engine.js';
+import { getFrequencyForNoteName } from '../logic/chords.js';
 
 // Editor Modal UI handling
 
@@ -78,18 +81,37 @@ export function openEditor(item, defaultName = '', currentScale = null) {
     editorInput.focus();
 
     // Render mini handpan
-    const mainSvg = document.getElementById('handpan-svg');
     const miniContainer = document.getElementById('editor-mini-handpan');
-    if (mainSvg && miniContainer) {
-        const clone = mainSvg.cloneNode(true);
-        clone.id = 'mini-handpan-svg';
-        clone.style.width = '100%';
-        clone.style.height = '100%';
-        clone.style.display = 'block';
-        clone.style.overflow = 'visible';
-        clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-        miniContainer.innerHTML = '';
-        miniContainer.appendChild(clone);
+    if (miniContainer) {
+        // Create an empty SVG or reuse existing
+        miniContainer.innerHTML = '<svg id="mini-handpan-svg" viewBox="0 0 500 500" style="width: 100%; height: auto;"></svg>';
+        const miniSvg = document.getElementById('mini-handpan-svg');
+        if (currentScale) {
+            renderHandpanSVG(currentScale, 'notes', miniSvg, (noteName) => {
+                // Play sound
+                if (noteName === 'T' || noteName === 't') {
+                    playTak(0, noteName === 'T', noteName === 't');
+                } else {
+                    const freq = getFrequencyForNoteName(noteName);
+                    if (freq) playTone(freq, noteName);
+                }
+                // Insert note
+                if (editorInput) {
+                    const start = editorInput.selectionStart;
+                    const end = editorInput.selectionEnd;
+                    const val = editorInput.value;
+
+                    let insertStr = noteName;
+                    if (start > 0 && val[start - 1] !== ' ' && val[start - 1] !== '\n' && val[start - 1] !== '(' && val[start - 1] !== '|') {
+                        insertStr = ' ' + insertStr;
+                    }
+
+                    editorInput.value = val.substring(0, start) + insertStr + val.substring(end);
+                    editorInput.selectionStart = editorInput.selectionEnd = start + insertStr.length;
+                    editorInput.focus();
+                }
+            });
+        }
     }
 
     // Generate fast insert buttons based on currentScale
