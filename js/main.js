@@ -3,9 +3,9 @@ import { initAudio, playTone, playTak, stopAllSounds, setVisualizerCallbacks, ge
 import { startProgression, stopProgression, toggleProgression, setProgressionCallbacks, setTempo, isPlaying as isProgressionPlaying, setCustomPrecountPattern } from './logic/progression.js';
 import { loadLastScale, saveLastScale, getAllScales, initCustomScales, saveCustomScale } from './data/scales.js';
 import { generateChords, parseNoteName, getFrequencyForNoteName } from './logic/chords.js';
-import { parseRhythmString } from './logic/parser.js';
+import { parseRhythmString, transposeMelodyText } from './logic/parser.js';
 import { initInteraction, renderHandpanSVG, highlightNote, highlightBody, resetVisuals } from './ui/visualizer.js';
-import { initModals } from './ui/modals.js';
+import { initModals, openScaleModal } from './ui/modals.js';
 import { initChordGrid, renderChordGrid, toggleChordSort } from './ui/chord_grid.js';
 import { initProgressionUI, addChordToProgression, updateProgressionItem, getProgressionChords, clearProgression, exportProgressionData, loadProgressionData } from './ui/progression.js';
 import { initEditor, openEditor } from './ui/editor.js';
@@ -20,6 +20,11 @@ let handpanNotes = []; // Array of {note, octave, value}
 let visualizerMode = 'notes'; // 'notes', 'numbers', 'degrees'
 let activeColor = 'none';
 let isCompactView = false;
+let isTransposingMelody = false;
+let transposeOldScale = null;
+
+let currentLoadedCompName = '';
+let currentLoadedCompCategory = '';
 
 // Function to trigger state save
 const saveCurrentState = () => {
@@ -44,7 +49,7 @@ const saveCurrentState = () => {
     }
     const bpmInput = document.getElementById('bpm-slider');
     const tempo = bpmInput ? parseInt(bpmInput.value) : 80;
-    storage.saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig, isCompactView ? 'compact' : 'grid');
+    storage.saveStateToLocal(currentScale, exportProgressionData(), tempo, precountConfig, isCompactView ? 'compact' : 'grid', currentLoadedCompName, currentLoadedCompCategory);
 };
 
 const resetPrecountUI = () => {
@@ -140,7 +145,11 @@ function initApp() {
         getScale: () => currentScale,
         parseText: (text) => parseRhythmString(text, currentScale),
         stopPlayback: () => stopPlayback(),
-        onClear: () => resetPrecountUI()
+        onClear: () => {
+            currentLoadedCompName = '';
+            currentLoadedCompCategory = '';
+            resetPrecountUI();
+        }
     });
 
     initEditor((data) => {
@@ -201,6 +210,26 @@ function initApp() {
 
     // 4. Global Event Listeners
     setupGlobalEvents();
+
+    const transposeBtn = document.getElementById('transpose-melody-btn');
+    if (transposeBtn) {
+        transposeBtn.addEventListener('click', () => {
+            const currentData = exportProgressionData();
+            if (currentData.length === 0) {
+                alert("Progression Stage is empty. Add phrases first to translate them.");
+                return;
+            }
+            isTransposingMelody = true;
+            transposeOldScale = currentScale;
+            // Native open UI
+            openScaleModal();
+        });
+        // Safety reset to false when modals are closed manually by overlapping click or close buttons
+        const overlay = document.getElementById('modal-overlay');
+        const scaleClose = document.getElementById('close-scale-modal');
+        if (overlay) overlay.addEventListener('click', () => isTransposingMelody = false);
+        if (scaleClose) scaleClose.addEventListener('click', () => isTransposingMelody = false);
+    }
 
     // 5. Share Button Setup
     const shareBtn = document.getElementById('share-progression');
@@ -298,8 +327,6 @@ function initApp() {
     }
 
     // 7. Save/Load Composition Modals
-    let currentLoadedCompName = '';
-    let currentLoadedCompCategory = '';
 
     const saveCompBtn = document.getElementById('save-comp-btn');
     if (saveCompBtn) {
@@ -674,6 +701,8 @@ function initApp() {
             }
             if (localData.tempo) updateBpmUI(localData.tempo);
             if (localData.precount) applyPrecountConfig(localData.precount);
+            if (localData.loadedCompName) currentLoadedCompName = localData.loadedCompName;
+            if (localData.loadedCompCategory) currentLoadedCompCategory = localData.loadedCompCategory;
         } else {
             const saved = loadLastScale() || getAllScales()[0];
             loadScale(saved, true);
@@ -685,6 +714,28 @@ function initApp() {
 
 function loadScale(scale, isInitialLoad = false) {
     if (!scale) return;
+    
+    // Check Transpose Mode
+    let transposedData = null;
+    if (isTransposingMelody && transposeOldScale) {
+        const progressionData = exportProgressionData();
+        if (progressionData.length > 0) {
+            // Ask user for tie-breaker preference
+            const roundUp = window.confirm(
+                "When transposing, some notes might fall exactly between two keys on the new handpan.\n\n" +
+                "Click OK to round these notes UP.\n" +
+                "Click Cancel to round these notes DOWN."
+            );
+
+            transposedData = progressionData.map(item => ({
+                ...item,
+                text: transposeMelodyText(item.text, transposeOldScale, scale, roundUp)
+            }));
+        }
+        isTransposingMelody = false;
+        transposeOldScale = null;
+    }
+
     currentScale = scale;
     saveLastScale(scale);
 
@@ -723,9 +774,9 @@ function loadScale(scale, isInitialLoad = false) {
 
     renderChordGrid(chords, dingNotes);
 
-    // Clear Progression? User might want to keep it?
-    // If it's the initial page load, do not clear the progression or trigger an empty save!
-    if (!isInitialLoad) {
+    if (transposedData) {
+        loadProgressionData(transposedData, false);
+    } else if (!isInitialLoad) {
         clearProgression(true);
         resetPrecountUI();
     } else {
@@ -788,10 +839,12 @@ function setupScheduler() {
             if (btn) {
                 btn.innerHTML = 'Play ▶';
                 btn.classList.remove('playing');
+                btn.classList.remove('stop-btn');
             }
             const canvasBtn = document.getElementById('canvas-play-btn');
             if (canvasBtn) {
                 canvasBtn.classList.remove('playing');
+                canvasBtn.classList.remove('stop-btn');
                 canvasBtn.setAttribute('title', 'Play');
                 canvasBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
             }
@@ -854,9 +907,11 @@ function togglePlayback() {
         if (btn) {
             btn.textContent = 'Stop ■';
             btn.classList.add('playing');
+            btn.classList.add('stop-btn');
         }
         if (canvasBtn) {
             canvasBtn.classList.add('playing');
+            canvasBtn.classList.add('stop-btn');
             canvasBtn.setAttribute('title', 'Stop');
             canvasBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>';
         }

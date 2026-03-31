@@ -453,6 +453,7 @@ function stopModalLoop() {
     if (currentModalBtn) {
         currentModalBtn.innerHTML = 'Play ▶';
         currentModalBtn.classList.remove('playing');
+        currentModalBtn.classList.remove('stop-btn');
         currentModalBtn = null;
     }
 
@@ -476,6 +477,7 @@ function startModalLoop(notes, pillsContainer, btnElement) {
     if (currentModalBtn) {
         currentModalBtn.innerHTML = 'Stop ■';
         currentModalBtn.classList.add('playing');
+        currentModalBtn.classList.add('stop-btn');
     }
 
     const playLoop = () => {

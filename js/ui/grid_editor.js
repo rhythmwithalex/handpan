@@ -1204,13 +1204,19 @@ function togglePlay() {
 
     isPlaying = !isPlaying;
     if (isPlaying) {
-        if (btn) btn.textContent = 'Stop ⏹';
+        if (btn) {
+            btn.textContent = 'Stop ⏹';
+            btn.classList.add('stop-btn');
+        }
         updateGuitarHeroUI(isGuitarHeroMode);
         
         // Lead-in duration
         startPlayback(true);
     } else {
-        if (btn) btn.textContent = 'Play ▶';
+        if (btn) {
+            btn.textContent = 'Play ▶';
+            btn.classList.remove('stop-btn');
+        }
         cancelAnimationFrame(animationFrameId);
         clearTimeout(playbackTimeoutId);
         playbackTimeoutId = null;
@@ -1706,16 +1712,11 @@ function importPhraseToGrid(phraseInput) {
         // each logical "step" of the sequence usually maps directly to `TICKS_PER_BEAT / currentResolution`
 
         // Let's compute exact ticks based on parsed duration
-        // Wait, parser outputs duration like: if divided by 2 -> 0.5 duration.
-        // A 1 quarter note beat = 12 ticks. Thus a duration of 1 = 12 ticks?
-        // Actually the Progression loop treats duration 1 as a single step token.
-        // In Grid, 1 step token = `TICKS_PER_BEAT / currentResolution` ticks.
-
-        // Calculate step length in ticks
-        // Since the parser output standardizes everything relative to the token count,
-        // we can just multiply token duration by TICKS_PER_BEAT
+        // parseText returns 'duration' relative to a 1-beat step.
+        // E.g. (A B)/2 returns duration 0.5. 
+        // 0.5 * 12 = 6 ticks. The currentResolution is not needed since duration is absolute.
         const duration = evt.duration || 1;
-        const stepTicks = Math.round(duration * TICKS_PER_BEAT * currentResolution);
+        const stepTicks = Math.round(duration * TICKS_PER_BEAT);
 
         if (evt.type === 'rest') {
             currentTick += stepTicks;

@@ -2,14 +2,16 @@
 
 const STORAGE_KEY = 'handpan_app_progression';
 
-export function saveStateToLocal(scale, progressionItemsData, tempo, precount, viewMode) {
+export function saveStateToLocal(scale, progressionItemsData, tempo, precount, viewMode, compName = null, compCategory = null) {
     if (!scale || !progressionItemsData) return;
     const data = {
         scale: scale,
         progression: progressionItemsData,
         tempo: tempo || 80,
         precount: precount,
-        viewMode: viewMode || 'grid'
+        viewMode: viewMode || 'grid',
+        loadedCompName: compName,
+        loadedCompCategory: compCategory
     };
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));

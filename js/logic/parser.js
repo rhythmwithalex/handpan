@@ -1,5 +1,6 @@
 
 import { getFrequencyForNoteName } from './chords.js';
+import { NOTE_TO_MIDI } from '../data/constants.js';
 
 export function parseRhythmString(text, currentScale) {
     const result = [];
@@ -175,4 +176,99 @@ function getSortedScaleNotes(currentScale) {
     toneCircle.sort((a, b) => a.freq - b.freq);
 
     return { dings, toneCircle };
+}
+
+function getMidiPitch(noteStr) {
+    const m = noteStr.match(/^([A-G][#b]?)(\d)$/i);
+    if (!m) return null;
+    const note = m[1].charAt(0).toUpperCase() + (m[1].length > 1 ? m[1].charAt(1).toLowerCase() : '');
+    const octave = parseInt(m[2]);
+    if (NOTE_TO_MIDI[note] === undefined) return null;
+    return (octave + 1) * 12 + NOTE_TO_MIDI[note];
+}
+
+export function transposeMelodyText(text, oldScale, newScale, roundUp = false) {
+    if (!text || !oldScale || !newScale) return text;
+
+    // 1. Get Primary Dings
+    let oldDing = oldScale.top[0];
+    let newDing = newScale.top[0];
+    if (oldDing.startsWith('D:')) oldDing = oldDing.substring(2);
+    if (newDing.startsWith('D:')) newDing = newDing.substring(2);
+
+    const oldDingPitch = getMidiPitch(oldDing);
+    const newDingPitch = getMidiPitch(newDing);
+
+    // If we can't calculate pitch for some reason, fallback to original text
+    if (oldDingPitch === null || newDingPitch === null) return text; 
+
+    const pitchDelta = newDingPitch - oldDingPitch;
+
+    // 2. Gather all available notes in new scale
+    const newScaleNotes = [...newScale.top, ...Object.keys(newScale.bottom)];
+    const availablePitches = newScaleNotes.map(nStr => {
+        let cleanStr = nStr.startsWith('D:') ? nStr.substring(2) : nStr;
+        return {
+            cleanName: cleanStr,
+            pitch: getMidiPitch(cleanStr)
+        };
+    }).filter(n => n.pitch !== null);
+
+    // Helper to find closest note
+    const getClosestNote = (targetPitch) => {
+        if (availablePitches.length === 0) return null;
+        let closest = availablePitches[0];
+        let minDiff = Math.abs(targetPitch - closest.pitch);
+
+        for (let i = 1; i < availablePitches.length; i++) {
+            const currentDiff = Math.abs(targetPitch - availablePitches[i].pitch);
+            
+            if (currentDiff < minDiff) {
+                minDiff = currentDiff;
+                closest = availablePitches[i];
+            } else if (currentDiff === minDiff) {
+                // Tie breaker: user preference
+                if (roundUp && availablePitches[i].pitch > closest.pitch) {
+                    closest = availablePitches[i];
+                } else if (!roundUp && availablePitches[i].pitch < closest.pitch) {
+                    closest = availablePitches[i];
+                }
+            }
+        }
+        return closest.cleanName;
+    };
+
+    // 3. Collect unique notes from old scale
+    const allOldNotes = [...oldScale.top, ...Object.keys(oldScale.bottom)].map(n => n.startsWith('D:') ? n.substring(2) : n);
+    const uniqueOldNotes = [...new Set(allOldNotes)];
+
+    // 4. Build translation map
+    const translationMap = {};
+    uniqueOldNotes.forEach(oldNote => {
+        const op = getMidiPitch(oldNote);
+        if (op !== null) {
+            const targetPitch = op + pitchDelta;
+            const replacement = getClosestNote(targetPitch);
+            if (replacement) {
+                translationMap[oldNote] = replacement;
+            }
+        }
+    });
+
+    // 5. Perform single-pass regex word-boundary replacements
+    // Sort keys by length descending to prevent partial replacements in the regex pattern (e.g. C#4 before C4)
+    const notesToReplace = Object.keys(translationMap).sort((a,b) => b.length - a.length);
+    if (notesToReplace.length === 0) return text;
+
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexPattern = notesToReplace.map(escapeRegex).join('|');
+    // We use a single global regex so that once a substring is replaced, it is never evaluated again
+    const regex = new RegExp(`(?<=^|[\\s|()])(${regexPattern})(?=[\\s|()]|$)`, 'gi');
+    
+    return text.replace(regex, (match) => {
+        // Re-construct proper capitalization to lookup in map
+        const char1 = match.length > 2 ? match.charAt(1).toLowerCase() : '';
+        const properlyCased = match.charAt(0).toUpperCase() + char1 + match.charAt(match.length - 1);
+        return translationMap[properlyCased] || match;
+    });
 }
